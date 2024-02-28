@@ -1,0 +1,1 @@
+emcc -O3 vortex/Bytecode/Bytecode.cpp vortex/Bytecode/Generator.cpp vortex/Lexer/Lexer.cpp vortex/Node/Node.cpp vortex/Parser/Parser.cpp vortex/utils/utils.cpp vortex/VirtualMachine/VirtualMachine.cpp vortex/main.cpp -sMAIN_MODULE -o vortex/vortex.html --embed-file vortex/modules -s TOTAL_MEMORY=629145600 -sSTACK_SIZE=10MB --embed-file vortex/source_dir

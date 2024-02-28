@@ -1,0 +1,15 @@
+emcc functools/functools.cpp -sSIDE_MODULE -o functools/bin/functools.wasm
+emcc future/future.cpp -sSIDE_MODULE -o future/bin/future.wasm
+emcc io/io.cpp -sSIDE_MODULE -o io/bin/io.wasm
+emcc logging/logging.cpp -sSIDE_MODULE -o logging/bin/logging.wasm
+emcc math/math.cpp -sSIDE_MODULE -o math/bin/math.wasm
+emcc os/os.cpp -sSIDE_MODULE -o os/bin/os.wasm
+emcc requests/requests.cpp -Irequests/include -Lrequests/lib -sSIDE_MODULE -o requests/bin/requests.wasm
+
+emcc -O3 sdl/sdl.cpp sdl/include/SDL2/*.cpp ../Bytecode/Bytecode.cpp ../Bytecode/Generator.cpp ../Lexer/Lexer.cpp ../Node/Node.cpp ../Parser/Parser.cpp ../utils/utils.cpp ../VirtualMachine/VirtualMachine.cpp  -o sdl/bin/sdl.wasm -s USE_SDL=2 -s USE_SDL_IMAGE=2 -s SDL2_IMAGE_FORMATS='["png"]' -s USE_SDL_TTF=2 -s USE_SDL_MIXER=2 -Isdl/include -Lsdl/lib -lSDL2 -sSIDE_MODULE
+
+emcc sqlite/sqlite.cpp -Isqlite/include -Lsqlite/lib -sSIDE_MODULE -o sqlite/bin/sqlite.wasm
+emcc string/string.cpp -sSIDE_MODULE -o string/bin/string.wasm
+emcc sys/sys.cpp -sSIDE_MODULE -o sys/bin/sys.wasm
+emcc time/time.cpp -sSIDE_MODULE -o time/bin/time.wasm
+emcc websockets/websockets.cpp ../Bytecode/Bytecode.cpp ../Bytecode/Generator.cpp ../Lexer/Lexer.cpp ../Node/Node.cpp ../Parser/Parser.cpp ../utils/utils.cpp ../VirtualMachine/VirtualMachine.cpp -Iwebsockets/include -Lwebsockets/lib -sSIDE_MODULE -o websockets/bin/websockets.wasm
