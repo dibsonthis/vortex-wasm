@@ -35,7 +35,7 @@ socket.on_open(() => {
 socket.on_message((message) => {
     const res = json.parse(message)
     if (res.data and res.data[0] and res.data[0].markPrice) {
-        var markPrice = res.data[0].markPrice
+        const markPrice = res.data[0].markPrice
         println(markPrice)
         marketPrice.update({
             innerHTML: "$" + markPrice.string(),
@@ -67,21 +67,41 @@ var input = element({
     }
 })
 
+createCSSClass("img", "
+    transition: transform 0.3s ease-in-out;
+    &:hover {
+        transform: scale(1.2) translateX(30px) rotate(10deg) !important;
+    }
+")
+
 var image = element({
     type: "img",
+    className: "img",
     style: {
         maxHeight: "300px",
+        borderRadius: "10px",
     },
+    transition: "transform 0.3s ease-in-out"
+})
+
+const rb = element({
+    type: "button",
+    innerHTML: "Rotate",
+    onClick: () => {
+        const current_r = wasm.run_script_number(f"parseFloat(document.getElementById(`${image.id}`).style.transform.replace('rotate(', '').replace('deg)', '')) || 0;")
+        image.update({
+            style: {
+                transform: f"rotate(${180 + current_r}deg)"
+            }
+        })
+    }
 })
 
 var image_div = element({
-    style: {
-        display: "none"
-    },
     children: [image, element({
         type: "p",
         innerHTML: "",
-    })]
+    }), rb]
 })
 
 const search_label = element({
@@ -134,7 +154,13 @@ var search_div = element({
 
 const onSuccess = (data) => {
     var res = json.parse(data)
-    breed_data = res.copy();
+    breed_data = res;
+    image.update({
+        src: res[0].image.url
+    })
+    image_div.children[1].update({
+        innerHTML: res[0].name
+    })
     buttons_div.update({
         children: res.map((e, i) => ({
             type: "button",
@@ -154,11 +180,6 @@ const onSuccess = (data) => {
                 println(e)
                 image.update({
                     src: e.image and e.image.url or ""
-                })
-                image_div.update({
-                    style: {
-                        display: "block"
-                    }
                 })
                 image_div.children[1].update({
                     innerHTML: e.name
