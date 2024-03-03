@@ -1,0 +1,148 @@
+import wasm
+import math
+import random
+
+type element = (config = {}, parent = None) => {
+    config.type or (config.type = "div")
+    config.id or (config.id = "e_" + string(math.abs(random.rand())))
+
+    var elem = {
+        id: config.id,
+        type: config.type
+    }
+
+    var script = f"var _elem = document.createElement('${config.type}');"
+    for (config.info().keys, index, key) {
+        if (key == "onClick") {
+            elem.onClick = wasm.make_closure(config[key])
+            script += f"_elem.onclick = function() {
+                Module.ccall('vortex_eval','void',['number'],[${elem.onClick}]);
+            };"
+            continue;
+        }
+        if (key == "style") {
+            if (config[key].type() != "Object") {
+                continue;
+            }
+            for (config[key].info().keys, i, k) {
+                script += f"_elem.style.${k} = `${config[key][k]}`;"
+            }
+            continue;
+        }
+        if (key == "children") {
+            // We need to deal with children AFTER this element has been created
+            continue;
+        }
+        script += f"_elem.${key} = `${config[key]}`;"
+    }
+
+    if (parent) {
+        script += f"document.getElementById(`${parent.id}`).appendChild(_elem);"
+    } else {
+        script += "document.body.appendChild(_elem);"
+    }
+
+    wasm.run_script(script)
+
+    if (config.children) {
+
+        elem.children = []
+
+        if (type(config.children) == "Object") {
+            if (config.children.info().typename == "element") {
+                wasm.run_script(f"document.getElementById(`${elem.id}`).appendChild(document.getElementById(`${config.children.id}`));")
+                elem.children.append(config.children)
+            } else {
+                var child = element(config.children, elem)
+                elem.children.append(child)
+            }
+        } else if (type(config.children) == "List") {
+            for (config.children, i, _child) {
+                if (_child.info().typename == "element") {
+                    wasm.run_script(f"document.getElementById(`${elem.id}`).appendChild(document.getElementById(`${_child.id}`));")
+                    elem.children.append(_child)
+                } else {
+                    var child = element(_child, elem)
+                    elem.children.append(child)
+                }
+            }
+        }
+    }
+
+    return {
+        ...elem,
+        update: (data) => {
+            if (data.type() != "Object") {
+                return;
+            }
+
+            var script = f"
+            var _elem = document.getElementById('${this.id}');
+            "
+            for (data.info().keys, index, key) {
+                if (key == "onClick") {
+                    if (this.onClick) {
+                        wasm.delete_closure(this.onClick)
+                    }
+                    this.onClick = wasm.make_closure(data[key])
+                    script += f"_elem.onclick = function() {
+                        Module.ccall('vortex_eval','void',['number'],[${this.onClick}]);
+                    };"
+                    continue;
+                }
+                if (key == "style") {
+                    if (data[key].type() != "Object") {
+                        continue;
+                    }
+                    for (data[key].info().keys, i, k) {
+                        script += f"_elem.style.${k} = `${data[key][k]}`;"
+                    }
+                    continue;
+                }
+                if (key == "children") {
+                    // We need to deal with children AFTER this element has been created
+                    continue;
+                }
+                script += f"_elem.${key} = `${data[key]}`;"
+            }
+            wasm.run_script(script);
+
+            if (data.children) {
+
+                this.children = []
+        
+                if (type(data.children) == "Object") {
+                    var child = element(data.children, this)
+                    this.children.append(child)
+                } else if (type(data.children) == "List") {
+                    for (data.children, i, _child) {
+                        var child = element(_child, this)
+                        this.children.append(child)
+                    }
+                }
+            }
+
+            return this;
+        }
+    }
+}
+
+const get = wasm.fetch_get
+
+const createCSSClass = (className, css) => {
+    const _id = "style_" + string(math.abs(random.rand()))
+    var script = f"var ${_id} = document.createElement('style');"
+    script += f"${_id}.type = 'text/css';"
+    script += f"${_id}.innerHTML = '.${className} { ${css} }';"
+    script += f"document.head.appendChild(${_id});"
+
+    wasm.run_script(script)
+}
+
+const addCSSClass = (id, className) => {
+    wasm.run_script(f"document.getElementById('${id}').classList.add('${className}');")
+}
+
+const removeCSSClass = (id, className) => {
+    wasm.run_script(f"document.getElementById('${id}').classList.remove('${className}');")
+}

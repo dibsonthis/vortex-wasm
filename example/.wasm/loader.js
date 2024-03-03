@@ -105,6 +105,7 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
         if (!check) throw msg + new Error().stack;
       }
 Module['FS_createPath']("/", "src", true, true);
+Module['FS_createPath']("/src", "components", true, true);
 
       /** @constructor */
       function DataRequest(start, end, audio) {
@@ -172,6 +173,6 @@ Module['FS_createPath']("/", "src", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/src/main.vtx", "start": 0, "end": 14424}], "remote_package_size": 14424});
+    loadPackage({"files": [{"filename": "/src/components/whirlwind.vtx", "start": 0, "end": 4973}, {"filename": "/src/main.vtx", "start": 4973, "end": 7068}], "remote_package_size": 7068});
 
   })();
