@@ -13,10 +13,42 @@ type element = (config = {}, parent = None) => {
 
     var script = f"var _elem = document.createElement('${config.type}');"
     for (config.info().keys, index, key) {
+        if (key == "type") {
+            continue;
+        }
+        if (key == "_type") {
+            script += f"_elem.type = `${config[key]}`;"
+            continue;
+        }
+        if (key == "_for") {
+            script += f"_elem.setAttribute('for', `${config[key]}`);"
+            continue;
+        }
         if (key == "onClick") {
             elem.onClick = wasm.make_closure(config[key])
             script += f"_elem.onclick = function() {
                 Module.ccall('vortex_eval','void',['number'],[${elem.onClick}]);
+            };"
+            continue;
+        }
+        if (key == "onInput") {
+            elem.onInput = wasm.make_closure(config[key])
+            script += f"_elem.oninput = function() {
+                Module.ccall('vortex_eval','void',['number'],[${elem.onInput}]);
+            };"
+            continue;
+        }
+        if (key == "onChange") {
+            elem.onChange = wasm.make_closure(config[key])
+            script += f"_elem.onchange = function() {
+                Module.ccall('vortex_eval','void',['number'],[${elem.onChange}]);
+            };"
+            continue;
+        }
+        if (key == "onBlur") {
+            elem.onBlur = wasm.make_closure(config[key])
+            script += f"_elem.onblur = function() {
+                Module.ccall('vortex_eval','void',['number'],[${elem.onBlur}]);
             };"
             continue;
         }
@@ -80,6 +112,17 @@ type element = (config = {}, parent = None) => {
             var _elem = document.getElementById('${this.id}');
             "
             for (data.info().keys, index, key) {
+                if (key == "type") {
+                    continue;
+                }
+                if (key == "_type") {
+                    script += f"_elem.type = `${data[key]}`;"
+                    continue;
+                }
+                if (key == "_for") {
+                    script += f"_elem.setAttribute('for', `${data[key]}`);"
+                    continue;
+                }
                 if (key == "onClick") {
                     if (this.onClick) {
                         wasm.delete_closure(this.onClick)
@@ -87,6 +130,36 @@ type element = (config = {}, parent = None) => {
                     this.onClick = wasm.make_closure(data[key])
                     script += f"_elem.onclick = function() {
                         Module.ccall('vortex_eval','void',['number'],[${this.onClick}]);
+                    };"
+                    continue;
+                }
+                if (key == "onInput") {
+                    if (this.onInput) {
+                        wasm.delete_closure(this.onInput)
+                    }
+                    this.onInput = wasm.make_closure(data[key])
+                    script += f"_elem.oninput = function() {
+                        Module.ccall('vortex_eval','void',['number'],[${this.onInput}]);
+                    };"
+                    continue;
+                }
+                if (key == "onChange") {
+                    if (this.onChange) {
+                        wasm.delete_closure(this.onChange)
+                    }
+                    this.onChange = wasm.make_closure(data[key])
+                    script += f"_elem.onchange = function() {
+                        Module.ccall('vortex_eval','void',['number'],[${this.onChange}]);
+                    };"
+                    continue;
+                }
+                if (key == "onBlur") {
+                    if (this.onBlur) {
+                        wasm.delete_closure(this.onBlur)
+                    }
+                    this.onBlur = wasm.make_closure(data[key])
+                    script += f"_elem.onblur = function() {
+                        Module.ccall('vortex_eval','void',['number'],[${this.onBlur}]);
                     };"
                     continue;
                 }
@@ -105,21 +178,51 @@ type element = (config = {}, parent = None) => {
                 }
                 script += f"_elem.${key} = `${data[key]}`;"
             }
+
             wasm.run_script(script);
 
             if (data.children) {
 
                 this.children = []
-        
-                if (type(data.children) == "Object") {
-                    var child = element(data.children, this)
-                    this.children.append(child)
-                } else if (type(data.children) == "List") {
-                    for (data.children, i, _child) {
-                        var child = element(_child, this)
+
+                const remove_children = f"
+                var _elem = document.getElementById(`${this.id}`);
+                while (_elem.firstChild) {
+                    _elem.removeChild(_elem.firstChild);
+                }
+                "
+
+                wasm.run_script(remove_children)
+
+                if (type(config.children) == "Object") {
+                    if (data.children.info().typename == "element") {
+                        wasm.run_script(f"document.getElementById(`${this.id}`).appendChild(document.getElementById(`${data.children.id}`));")
+                        this.children.append(data.children)
+                    } else {
+                        var child = element(data.children, this)
                         this.children.append(child)
                     }
+                } else if (type(data.children) == "List") {
+                    for (data.children, i, _child) {
+                        if (_child.info().typename == "element") {
+                            wasm.run_script(f"document.getElementById(`${this.id}`).appendChild(document.getElementById(`${_child.id}`));")
+                            this.children.append(_child)
+                        } else {
+                            var child = element(_child, this)
+                            this.children.append(child)
+                        }
+                    }
                 }
+        
+                // if (type(data.children) == "Object") {
+                //     var child = element(data.children, this)
+                //     this.children.append(child)
+                // } else if (type(data.children) == "List") {
+                //     for (data.children, i, _child) {
+                //         var child = element(_child, this)
+                //         this.children.append(child)
+                //     }
+                // }
             }
 
             return this;
@@ -145,4 +248,12 @@ const addCSSClass = (id, className) => {
 
 const removeCSSClass = (id, className) => {
     wasm.run_script(f"document.getElementById('${id}').classList.remove('${className}');")
+}
+
+const value = (element) => {
+    return wasm.run_script_string(f"document.getElementById(`${element.id}`).value")
+}
+
+const click = (element) => {
+    return wasm.run_script(f"document.getElementById(`${element.id}`).click()")
 }

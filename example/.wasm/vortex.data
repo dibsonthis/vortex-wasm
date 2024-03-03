@@ -13,10 +13,42 @@ type element = (config = {}, parent = None) => {
 
     var script = f"var _elem = document.createElement('${config.type}');"
     for (config.info().keys, index, key) {
+        if (key == "type") {
+            continue;
+        }
+        if (key == "_type") {
+            script += f"_elem.type = `${config[key]}`;"
+            continue;
+        }
+        if (key == "_for") {
+            script += f"_elem.setAttribute('for', `${config[key]}`);"
+            continue;
+        }
         if (key == "onClick") {
             elem.onClick = wasm.make_closure(config[key])
             script += f"_elem.onclick = function() {
                 Module.ccall('vortex_eval','void',['number'],[${elem.onClick}]);
+            };"
+            continue;
+        }
+        if (key == "onInput") {
+            elem.onInput = wasm.make_closure(config[key])
+            script += f"_elem.oninput = function() {
+                Module.ccall('vortex_eval','void',['number'],[${elem.onInput}]);
+            };"
+            continue;
+        }
+        if (key == "onChange") {
+            elem.onChange = wasm.make_closure(config[key])
+            script += f"_elem.onchange = function() {
+                Module.ccall('vortex_eval','void',['number'],[${elem.onChange}]);
+            };"
+            continue;
+        }
+        if (key == "onBlur") {
+            elem.onBlur = wasm.make_closure(config[key])
+            script += f"_elem.onblur = function() {
+                Module.ccall('vortex_eval','void',['number'],[${elem.onBlur}]);
             };"
             continue;
         }
@@ -80,6 +112,17 @@ type element = (config = {}, parent = None) => {
             var _elem = document.getElementById('${this.id}');
             "
             for (data.info().keys, index, key) {
+                if (key == "type") {
+                    continue;
+                }
+                if (key == "_type") {
+                    script += f"_elem.type = `${data[key]}`;"
+                    continue;
+                }
+                if (key == "_for") {
+                    script += f"_elem.setAttribute('for', `${data[key]}`);"
+                    continue;
+                }
                 if (key == "onClick") {
                     if (this.onClick) {
                         wasm.delete_closure(this.onClick)
@@ -87,6 +130,36 @@ type element = (config = {}, parent = None) => {
                     this.onClick = wasm.make_closure(data[key])
                     script += f"_elem.onclick = function() {
                         Module.ccall('vortex_eval','void',['number'],[${this.onClick}]);
+                    };"
+                    continue;
+                }
+                if (key == "onInput") {
+                    if (this.onInput) {
+                        wasm.delete_closure(this.onInput)
+                    }
+                    this.onInput = wasm.make_closure(data[key])
+                    script += f"_elem.oninput = function() {
+                        Module.ccall('vortex_eval','void',['number'],[${this.onInput}]);
+                    };"
+                    continue;
+                }
+                if (key == "onChange") {
+                    if (this.onChange) {
+                        wasm.delete_closure(this.onChange)
+                    }
+                    this.onChange = wasm.make_closure(data[key])
+                    script += f"_elem.onchange = function() {
+                        Module.ccall('vortex_eval','void',['number'],[${this.onChange}]);
+                    };"
+                    continue;
+                }
+                if (key == "onBlur") {
+                    if (this.onBlur) {
+                        wasm.delete_closure(this.onBlur)
+                    }
+                    this.onBlur = wasm.make_closure(data[key])
+                    script += f"_elem.onblur = function() {
+                        Module.ccall('vortex_eval','void',['number'],[${this.onBlur}]);
                     };"
                     continue;
                 }
@@ -105,21 +178,51 @@ type element = (config = {}, parent = None) => {
                 }
                 script += f"_elem.${key} = `${data[key]}`;"
             }
+
             wasm.run_script(script);
 
             if (data.children) {
 
                 this.children = []
-        
-                if (type(data.children) == "Object") {
-                    var child = element(data.children, this)
-                    this.children.append(child)
-                } else if (type(data.children) == "List") {
-                    for (data.children, i, _child) {
-                        var child = element(_child, this)
+
+                const remove_children = f"
+                var _elem = document.getElementById(`${this.id}`);
+                while (_elem.firstChild) {
+                    _elem.removeChild(_elem.firstChild);
+                }
+                "
+
+                wasm.run_script(remove_children)
+
+                if (type(config.children) == "Object") {
+                    if (data.children.info().typename == "element") {
+                        wasm.run_script(f"document.getElementById(`${this.id}`).appendChild(document.getElementById(`${data.children.id}`));")
+                        this.children.append(data.children)
+                    } else {
+                        var child = element(data.children, this)
                         this.children.append(child)
                     }
+                } else if (type(data.children) == "List") {
+                    for (data.children, i, _child) {
+                        if (_child.info().typename == "element") {
+                            wasm.run_script(f"document.getElementById(`${this.id}`).appendChild(document.getElementById(`${_child.id}`));")
+                            this.children.append(_child)
+                        } else {
+                            var child = element(_child, this)
+                            this.children.append(child)
+                        }
+                    }
                 }
+        
+                // if (type(data.children) == "Object") {
+                //     var child = element(data.children, this)
+                //     this.children.append(child)
+                // } else if (type(data.children) == "List") {
+                //     for (data.children, i, _child) {
+                //         var child = element(_child, this)
+                //         this.children.append(child)
+                //     }
+                // }
             }
 
             return this;
@@ -145,28 +248,81 @@ const addCSSClass = (id, className) => {
 
 const removeCSSClass = (id, className) => {
     wasm.run_script(f"document.getElementById('${id}').classList.remove('${className}');")
-}import [element, get, createCSSClass, addCSSClass, removeCSSClass] : "components/whirlwind"
-import [forEach, map] : functional
+}
+
+const value = (element) => {
+    return wasm.run_script_string(f"document.getElementById(`${element.id}`).value")
+}
+
+const click = (element) => {
+    return wasm.run_script(f"document.getElementById(`${element.id}`).click()")
+}import [element, get, createCSSClass, addCSSClass, removeCSSClass, value, click] : "components/whirlwind"
+import [forEach, map, filter] : functional
 import json
+import wasm
+import [chars, join, contains, lower] : string
 
-createCSSClass("load-btn", "
-    font-size: 16px; 
-    background-color: #08887C; 
-    color: white;
-    border-radius: 5px;
-    border: none;
-    padding: 10px;
-    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.18);
-    cursor: pointer;
-    transition: 220ms all ease-in-out;
-    &:hover {
-        background-color: #098808;
+var breed_data = {}
+var prev_market_price = 0
+
+var marketPriceLabel = element({
+    type: "span",
+    innerHTML: "XBTUSD Market price:",
+    style: {
+        fontWeight: "bold"
     }
-")
+})
 
-var t = element({
-    type: "p",
-    innerHTML: "No data..."
+var marketPrice = element({
+    type: "span",
+    style: {
+        marginLeft: "10px"
+    }
+})
+
+const socket = wasm.Socket("wss://ws.bitmex.com/realtime")
+socket.on_open(() => {
+    println("Connected")
+    // Subscribe
+    const msg = json.serialize({
+        op: "subscribe",
+        args: ["instrument:XBTUSD"]
+    })
+    socket.send(msg)
+})
+socket.on_message((message) => {
+    const res = json.parse(message)
+    if (res.data and res.data[0] and res.data[0].markPrice) {
+        var markPrice = res.data[0].markPrice
+        println(markPrice)
+        marketPrice.update({
+            innerHTML: "$" + markPrice.string(),
+            style: {
+                color: (markPrice >= prev_market_price and "green" or "red")
+            }
+        })
+        prev_market_price = markPrice
+    }
+})
+socket.on_error(() => {
+    println(f"Error")
+})
+socket.on_close((e) => {
+    println(f"Disconnecting: ", e)
+})
+
+var buttons_div = element({
+    style: {
+        padding: "10px"
+    }
+})
+
+var input = element({
+    type: "input",
+    name: "search",
+    style: {
+        margin: "10px"
+    }
 })
 
 var image = element({
@@ -177,22 +333,67 @@ var image = element({
 })
 
 var image_div = element({
+    style: {
+        display: "none"
+    },
     children: [image, element({
         type: "p",
-        innerHTML: ""
+        innerHTML: "",
     })]
 })
 
+const search_label = element({
+    type: "label",
+    _for: input.id,
+    innerText: "Filter"
+})
+
+input.update({
+    onInput: () => {
+        const value = input.value()
+        buttons_div.update({
+            children: breed_data.filter((e) => value == "" or e.name.lower().contains(value.lower())).map((e, i) => ({
+                type: "button",
+                id: i.string(),
+                innerHTML: e.name,
+                style: {
+                    padding: "10px",
+                    margin: "5px",
+                    backgroundColor: "blue",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "10px",
+                    fontSize: "18px",
+                    cursor: "pointer", 
+                },
+                onClick: () => {
+                    println(e)
+                    image.update({
+                        src: e.image and e.image.url or ""
+                    })
+                    image_div.update({
+                        style: {
+                            display: "block"
+                        }
+                    })
+                    image_div.children[1].update({
+                        innerHTML: e.name
+                    })
+                }
+            }))
+        })
+    }
+})
+
+var search_div = element({
+    type: "div",
+    children: [search_label, input]
+})
+
 const onSuccess = (data) => {
-    const res = json.parse(data)
-    t.update({
-        innerHTML: "Data: " + res.length().string()
-    })
-    var list = element({
-        style: {
-            padding: "10px",
-            maxWidth: "800px",
-        },
+    var res = json.parse(data)
+    breed_data = res.copy();
+    buttons_div.update({
         children: res.map((e, i) => ({
             type: "button",
             id: i.string(),
@@ -212,6 +413,11 @@ const onSuccess = (data) => {
                 image.update({
                     src: e.image and e.image.url or ""
                 })
+                image_div.update({
+                    style: {
+                        display: "block"
+                    }
+                })
                 image_div.children[1].update({
                     innerHTML: e.name
                 })
@@ -222,13 +428,14 @@ const onSuccess = (data) => {
 
 const api_key = "live_zHbEWQ3nQu77w2E06tbkSKsVj49Gr5DMY6B8jobyZ5wyDnPO0vkfJ8t7A6nbPa0m"
 
-const load_button = element({
-    type: "button",
-    innerHTML: "Load breeds",
-    className: "load-btn",
-    onClick: () => {
-        get("https://api.thecatapi.com/v1/breeds", onSuccess, (data) => println("Failed"), {
-            "x-api-key": api_key
-        })        
-    }
+var buttons_container = element({
+    children: [buttons_div]
 })
+
+var structure = element({
+    children: [image_div, buttons_container]
+})
+
+get("https://api.thecatapi.com/v1/breeds", onSuccess, (data) => println("Failed"), {
+    "x-api-key": api_key
+})  

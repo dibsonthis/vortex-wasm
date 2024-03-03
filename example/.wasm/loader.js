@@ -173,6 +173,6 @@ Module['FS_createPath']("/src", "components", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/src/components/whirlwind.vtx", "start": 0, "end": 4973}, {"filename": "/src/main.vtx", "start": 4973, "end": 7068}], "remote_package_size": 7068});
+    loadPackage({"files": [{"filename": "/src/components/whirlwind.vtx", "start": 0, "end": 9478}, {"filename": "/src/main.vtx", "start": 9478, "end": 13943}], "remote_package_size": 13943});
 
   })();
