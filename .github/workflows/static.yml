@@ -33,6 +33,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Run Script
         run: |
+          chmod +x ./scripts/actions_compile.sh
           ./scripts/actions_compile.sh
       - name: Setup Pages
         uses: actions/configure-pages@v4
