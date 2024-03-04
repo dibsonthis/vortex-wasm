@@ -199,9 +199,9 @@ Module.expectedDataFileDownloads++;
         for (var i = 0; i < files.length; ++i) {
           DataRequest.prototype.requests[files[i].filename].onload();
         }
-        Module["removeRunDependency"]("datafile_.wasm/vortex.data");
+        Module["removeRunDependency"]("datafile_wasm/vortex.data");
       }
-      Module["addRunDependency"]("datafile_.wasm/vortex.data");
+      Module["addRunDependency"]("datafile_wasm/vortex.data");
 
       if (!Module.preloadResults) Module.preloadResults = {};
 
