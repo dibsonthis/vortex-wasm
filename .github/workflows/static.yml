@@ -31,10 +31,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Run Script
+      - name: Unzip File
         run: |
-          chmod +x ./scripts/actions_compile.sh
-          ./scripts/actions_compile.sh
+          unzip wasm/vortex.wasm.zip -d wasm/vortex.wasm
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
