@@ -108,6 +108,11 @@ type element = (config = {}, parent = None) => {
                 return;
             }
 
+            // Force onChange hook to mimic an actual change in value
+            this.info().onChangeHook and this.info().onChangeHook({old: {}, current: data})
+            if (this.__inner_hook) {
+                this.__inner_hook.info().onChangeHook and this.__inner_hook.info().onChangeHook({old: {}, current: data})
+            }
             var script = f"
             var _elem = document.getElementById('${this.id}');
             "
@@ -332,8 +337,78 @@ const label = (config) => element({
 const form = (config) => element({
     type: "form",
     ...config
-})import [
-    element, 
+})
+
+/* Reactivity */
+
+const ref = (value) => {
+    return {
+        value: value
+    }
+}
+
+const appendOnChange = (_ref, hook) => {
+    const currentHook = _ref.value.info().onChangeHook
+    if (currentHook) {
+        _ref.value::onChange((e) => {
+            currentHook(e)
+            hook(e)
+        })
+        return _ref
+    }
+    _ref.value::onChange(hook)
+    return _ref
+}
+
+const appendOnChangeEx = (_ref, hook) => {
+    if (!_ref.__inner_hook) {
+        _ref.__inner_hook = 0
+    }
+
+    const currentHook = _ref.__inner_hook.info().onChangeHook
+    if (currentHook) {
+        _ref.__inner_hook::onChange((e) => {
+            currentHook(e)
+            hook(e)
+        })
+        return _ref
+    }
+    _ref.__inner_hook::onChange(hook)
+    return _ref
+}
+
+const reactive = (config: Config, fn: (data) => Config, _ref: Ref | Element) => {
+    var e = element(config)
+    if (_ref.info().typename == "element") {
+        _ref.appendOnChangeEx((data) => {
+            e.update(fn(data.current))
+        })
+        return e
+    }
+    _ref.appendOnChange((data) => {
+        e.update(fn(data.current))
+    })
+    return e
+}
+
+const react = (el: Element, _ref: Ref | Element, fn: (data) => Config) => {
+    if (_ref.info().typename == "element") {
+        _ref.appendOnChangeEx((e) => {
+            el.update(fn(e.current))
+        })
+        return el
+    }
+    _ref.appendOnChange((e) => {
+        el.update(fn(e.current))
+    })
+    return el
+}import [
+    ref,
+    appendOnChange,
+    appendOnChangeEx,
+    element,
+    reactive,
+    react,
     fetch, 
     createCSSClass, 
     addCSSClass, 
@@ -358,8 +433,27 @@ import os
 
 var breed_data = {}
 var prev_market_price = 0
+var prev_market_price_ref = ref(0)
 
-img({
+const r = reactive({
+    type: "p",
+    innerHTML: "-"
+}, (data) => ({
+    innerHTML: data,
+    style: {
+        color: "red"
+    }
+}), prev_market_price_ref)
+
+const r2 = span({
+    innerHTML: "Hello"
+})
+
+r2.react(prev_market_price_ref, (data) => ({
+    innerHTML: data
+}))
+
+const loader = img({
     src: "src/resources/loader.gif",
     style: {
         maxHeight: "100px",
@@ -409,6 +503,7 @@ socket.on_message((message) => {
                 color: (markPrice >= prev_market_price and "green" or "red")
             }
         })
+        prev_market_price_ref.value = prev_market_price
         prev_market_price = markPrice
     }
 })
@@ -471,6 +566,23 @@ var image = img({
     },
     transition: "transform 0.3s ease-in-out"
 })
+
+const url = p({
+    innerHTML: "bllbbl"
+})
+
+url.react(image, (data) => ({
+    innerHTML: data.src
+}))
+
+const url2 = reactive({
+    type: "a",
+    innerHTML: "bloop",
+}, (data) => ({
+    innerHTML: data.src,
+    href: data.src,
+    target: "_blank"
+}), image)
 
 const rb = button({
     innerHTML: "Rotate",
@@ -546,6 +658,11 @@ var search_div = div({
 })
 
 const onSuccess = (data) => {
+    loader.update({
+        style: {
+            display: "none"
+        }
+    })
     var res = json.parse(data)
     breed_data = res;
     res[0].image and image.update({
@@ -586,7 +703,7 @@ var buttons_container = div({
 })
 
 var structure = div({
-    children: [market_div, image_div, search_div, buttons_container]
+    children: [market_div, loader, image_div, search_div, buttons_container]
 })
 
 println("OPTIMISED")

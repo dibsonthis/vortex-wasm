@@ -108,6 +108,11 @@ type element = (config = {}, parent = None) => {
                 return;
             }
 
+            // Force onChange hook to mimic an actual change in value
+            this.info().onChangeHook and this.info().onChangeHook({old: {}, current: data})
+            if (this.__inner_hook) {
+                this.__inner_hook.info().onChangeHook and this.__inner_hook.info().onChangeHook({old: {}, current: data})
+            }
             var script = f"
             var _elem = document.getElementById('${this.id}');
             "
@@ -333,3 +338,68 @@ const form = (config) => element({
     type: "form",
     ...config
 })
+
+/* Reactivity */
+
+const ref = (value) => {
+    return {
+        value: value
+    }
+}
+
+const appendOnChange = (_ref, hook) => {
+    const currentHook = _ref.value.info().onChangeHook
+    if (currentHook) {
+        _ref.value::onChange((e) => {
+            currentHook(e)
+            hook(e)
+        })
+        return _ref
+    }
+    _ref.value::onChange(hook)
+    return _ref
+}
+
+const appendOnChangeEx = (_ref, hook) => {
+    if (!_ref.__inner_hook) {
+        _ref.__inner_hook = 0
+    }
+
+    const currentHook = _ref.__inner_hook.info().onChangeHook
+    if (currentHook) {
+        _ref.__inner_hook::onChange((e) => {
+            currentHook(e)
+            hook(e)
+        })
+        return _ref
+    }
+    _ref.__inner_hook::onChange(hook)
+    return _ref
+}
+
+const reactive = (config: Config, fn: (data) => Config, _ref: Ref | Element) => {
+    var e = element(config)
+    if (_ref.info().typename == "element") {
+        _ref.appendOnChangeEx((data) => {
+            e.update(fn(data.current))
+        })
+        return e
+    }
+    _ref.appendOnChange((data) => {
+        e.update(fn(data.current))
+    })
+    return e
+}
+
+const react = (el: Element, _ref: Ref | Element, fn: (data) => Config) => {
+    if (_ref.info().typename == "element") {
+        _ref.appendOnChangeEx((e) => {
+            el.update(fn(e.current))
+        })
+        return el
+    }
+    _ref.appendOnChange((e) => {
+        el.update(fn(e.current))
+    })
+    return el
+}

@@ -1,5 +1,10 @@
 import [
-    element, 
+    ref,
+    appendOnChange,
+    appendOnChangeEx,
+    element,
+    reactive,
+    react,
     fetch, 
     createCSSClass, 
     addCSSClass, 
@@ -24,8 +29,27 @@ import os
 
 var breed_data = {}
 var prev_market_price = 0
+var prev_market_price_ref = ref(0)
 
-img({
+const r = reactive({
+    type: "p",
+    innerHTML: "-"
+}, (data) => ({
+    innerHTML: data,
+    style: {
+        color: "red"
+    }
+}), prev_market_price_ref)
+
+const r2 = span({
+    innerHTML: "Hello"
+})
+
+r2.react(prev_market_price_ref, (data) => ({
+    innerHTML: data
+}))
+
+const loader = img({
     src: "src/resources/loader.gif",
     style: {
         maxHeight: "100px",
@@ -75,6 +99,7 @@ socket.on_message((message) => {
                 color: (markPrice >= prev_market_price and "green" or "red")
             }
         })
+        prev_market_price_ref.value = prev_market_price
         prev_market_price = markPrice
     }
 })
@@ -137,6 +162,23 @@ var image = img({
     },
     transition: "transform 0.3s ease-in-out"
 })
+
+const url = p({
+    innerHTML: "bllbbl"
+})
+
+url.react(image, (data) => ({
+    innerHTML: data.src
+}))
+
+const url2 = reactive({
+    type: "a",
+    innerHTML: "bloop",
+}, (data) => ({
+    innerHTML: data.src,
+    href: data.src,
+    target: "_blank"
+}), image)
 
 const rb = button({
     innerHTML: "Rotate",
@@ -212,6 +254,11 @@ var search_div = div({
 })
 
 const onSuccess = (data) => {
+    loader.update({
+        style: {
+            display: "none"
+        }
+    })
     var res = json.parse(data)
     breed_data = res;
     res[0].image and image.update({
@@ -252,7 +299,7 @@ var buttons_container = div({
 })
 
 var structure = div({
-    children: [market_div, image_div, search_div, buttons_container]
+    children: [market_div, loader, image_div, search_div, buttons_container]
 })
 
 println("OPTIMISED")
