@@ -404,8 +404,6 @@ const react = (el: Element, _ref: Ref | Element, fn: (data) => Config) => {
     return el
 }import [
     ref,
-    appendOnChange,
-    appendOnChangeEx,
     element,
     reactive,
     react,
@@ -570,10 +568,10 @@ const url = reactive({
     type: "a",
     innerHTML: "",
     target: "_blank"
-}, (data) => ({
+}, (data) => (data.src and {
     innerHTML: data.src,
     href: data.src
-}), image)
+} or {}), image)
 
 var image_div = div({
     children: [image, p({
