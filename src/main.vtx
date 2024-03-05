@@ -31,24 +31,6 @@ var breed_data = {}
 var prev_market_price = 0
 var prev_market_price_ref = ref(0)
 
-const r = reactive({
-    type: "p",
-    innerHTML: "-"
-}, (data) => ({
-    innerHTML: data,
-    style: {
-        color: "red"
-    }
-}), prev_market_price_ref)
-
-const r2 = span({
-    innerHTML: "Hello"
-})
-
-r2.react(prev_market_price_ref, (data) => ({
-    innerHTML: data
-}))
-
 const loader = img({
     src: "src/resources/loader.gif",
     style: {
@@ -163,23 +145,6 @@ var image = img({
     transition: "transform 0.3s ease-in-out"
 })
 
-const url = p({
-    innerHTML: "bllbbl"
-})
-
-url.react(image, (data) => ({
-    innerHTML: data.src
-}))
-
-const url2 = reactive({
-    type: "a",
-    innerHTML: "bloop",
-}, (data) => ({
-    innerHTML: data.src,
-    href: data.src,
-    target: "_blank"
-}), image)
-
 const rb = button({
     innerHTML: "Rotate",
     style: {
@@ -197,6 +162,15 @@ const rb = button({
     }
 })
 
+const url = reactive({
+    type: "a",
+    innerHTML: "",
+    target: "_blank"
+}, (data) => ({
+    innerHTML: data.src,
+    href: data.src
+}), image)
+
 var image_div = div({
     children: [image, p({
         innerHTML: "",
@@ -205,7 +179,12 @@ var image_div = div({
             fontSize: "18px",
             fontWeight: "bold"
         }
-    }), rb]
+    }), div({
+            children: url, 
+            style: {
+                marginBottom: "20px"
+            }}), 
+        rb]
 })
 
 const search_label = label({
@@ -263,6 +242,10 @@ const onSuccess = (data) => {
     breed_data = res;
     res[0].image and image.update({
         src: res[0].image.url
+    })
+    res[0].image and url.update({
+        innerHTML: res[0].image.url,
+        href: res[0].image.url
     })
     image_div.children[1].update({
         innerHTML: res[0].name.upper()

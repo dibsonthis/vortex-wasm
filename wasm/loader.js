@@ -174,6 +174,6 @@ Module['FS_createPath']("/src", "resources", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/src/components/whirlwind.vtx", "start": 0, "end": 12316}, {"filename": "/src/main.vtx", "start": 12316, "end": 18984}, {"filename": "/src/resources/cat.jpg", "start": 18984, "end": 72002}, {"filename": "/src/resources/loader.gif", "start": 72002, "end": 144193}], "remote_package_size": 144193});
+    loadPackage({"files": [{"filename": "/src/components/whirlwind.vtx", "start": 0, "end": 12316}, {"filename": "/src/main.vtx", "start": 12316, "end": 18826}, {"filename": "/src/resources/cat.jpg", "start": 18826, "end": 71844}, {"filename": "/src/resources/loader.gif", "start": 71844, "end": 144035}], "remote_package_size": 144035});
 
   })();
