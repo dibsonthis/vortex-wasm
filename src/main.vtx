@@ -245,6 +245,8 @@ var structure = element({
     children: [market_div, image_div, search_div, buttons_container]
 })
 
+println("OPTIMISED")
+
 get("https://api.thecatapi.com/v1/breeds", onSuccess, (data) => println("Failed"), {
     "x-api-key": os.get_env("api_key")
 })  
