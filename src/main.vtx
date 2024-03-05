@@ -1,36 +1,52 @@
-import [element, get, createCSSClass, addCSSClass, removeCSSClass, value, click] : "components/whirlwind"
+import [
+    element, 
+    fetch, 
+    createCSSClass, 
+    addCSSClass, 
+    removeCSSClass, 
+    scrollToTop,
+    value, 
+    click,
+    input,
+    div,
+    span,
+    button,
+    img,
+    p,
+    label
+] : "components/whirlwind"
+
 import [chars, join, contains, lower, upper] : string
 import [forEach, map, filter] : functional
 import json
 import wasm
 import os
 
-const scrollToTop = () => {
-    wasm.run_script("window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-    });")
-}
-
 var breed_data = {}
 var prev_market_price = 0
 
-var marketPriceLabel = element({
-    type: "span",
+img({
+    src: "src/resources/loader.gif",
+    style: {
+        maxHeight: "100px",
+        borderRadius: "100px"
+    }
+})
+
+var marketPriceLabel = span({
     innerHTML: "XBTUSD Market price:",
     style: {
         fontWeight: "bold"
     }
 })
 
-var marketPrice = element({
-    type: "span",
+var marketPrice = span({
     style: {
         marginLeft: "10px"
     }
 })
 
-var market_div = element({
+var market_div = div({
     style: {
         marginTop: "20px",
         marginBottom: "20px"
@@ -69,14 +85,13 @@ socket.on_close((e) => {
     println(f"Disconnecting: ", e)
 })
 
-var buttons_div = element({
+var buttons_div = div({
     style: {
         padding: "10px"
     }
 })
 
-var input = element({
-    type: "input",
+var filterInput = input({
     name: "search",
     style: {
         margin: "10px"
@@ -114,8 +129,7 @@ const button_styles = {
     height: "60px"
 }
 
-var image = element({
-    type: "img",
+var image = img({
     className: "img",
     style: {
         maxHeight: "400px",
@@ -124,8 +138,7 @@ var image = element({
     transition: "transform 0.3s ease-in-out"
 })
 
-const rb = element({
-    type: "button",
+const rb = button({
     innerHTML: "Rotate",
     style: {
         ...button_styles,
@@ -142,9 +155,8 @@ const rb = element({
     }
 })
 
-var image_div = element({
-    children: [image, element({
-        type: "p",
+var image_div = div({
+    children: [image, p({
         innerHTML: "",
         style: {
             fontFamily: "inherit",
@@ -154,18 +166,17 @@ var image_div = element({
     }), rb]
 })
 
-const search_label = element({
-    type: "label",
-    _for: input.id,
+const search_label = label({
+    _for: filterInput.id,
     innerText: "Filter",
     style: {
         fontFamily: "inherit"
     }
 })
 
-input.update({
+filterInput.update({
     onInput: () => {
-        const value = input.value()
+        const value = filterInput.value()
         buttons_div.update({
             children: breed_data.filter((e) => value == "" or e.name.lower().contains(value.lower())).map((e, i) => ({
                 type: "button",
@@ -196,9 +207,8 @@ input.update({
     }
 })
 
-var search_div = element({
-    type: "div",
-    children: [search_label, input]
+var search_div = div({
+    children: [search_label, filterInput]
 })
 
 const onSuccess = (data) => {
@@ -237,16 +247,16 @@ const onSuccess = (data) => {
 const api_key = "live_zHbEWQ3nQu77w2E06tbkSKsVj49Gr5DMY6B8jobyZ5wyDnPO0vkfJ8t7A6nbPa0m"
 os.set_env("api_key", api_key)
 
-var buttons_container = element({
+var buttons_container = div({
     children: [buttons_div]
 })
 
-var structure = element({
+var structure = div({
     children: [market_div, image_div, search_div, buttons_container]
 })
 
 println("OPTIMISED")
 
-get("https://api.thecatapi.com/v1/breeds", onSuccess, (data) => println("Failed"), {
+fetch.get("https://api.thecatapi.com/v1/breeds", onSuccess, (data) => println("Failed"), {
     "x-api-key": os.get_env("api_key")
 })  

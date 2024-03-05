@@ -106,6 +106,7 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
       }
 Module['FS_createPath']("/", "src", true, true);
 Module['FS_createPath']("/src", "components", true, true);
+Module['FS_createPath']("/src", "resources", true, true);
 
       /** @constructor */
       function DataRequest(start, end, audio) {
@@ -173,6 +174,6 @@ Module['FS_createPath']("/src", "components", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/src/components/whirlwind.vtx", "start": 0, "end": 9478}, {"filename": "/src/main.vtx", "start": 9478, "end": 15370}], "remote_package_size": 15370});
+    loadPackage({"files": [{"filename": "/src/components/whirlwind.vtx", "start": 0, "end": 10537}, {"filename": "/src/main.vtx", "start": 10537, "end": 16399}, {"filename": "/src/resources/cat.jpg", "start": 16399, "end": 69417}, {"filename": "/src/resources/loader.gif", "start": 69417, "end": 141608}], "remote_package_size": 141608});
 
   })();

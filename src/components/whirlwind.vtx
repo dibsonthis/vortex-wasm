@@ -230,7 +230,9 @@ type element = (config = {}, parent = None) => {
     }
 }
 
-const get = wasm.fetch_get
+const fetch = {
+    get: wasm.fetch_get
+}
 
 const createCSSClass = (className, css) => {
     const _id = "style_" + string(math.abs(random.rand()))
@@ -257,3 +259,77 @@ const value = (element) => {
 const click = (element) => {
     return wasm.run_script(f"document.getElementById(`${element.id}`).click()")
 }
+
+const scrollToTop = () => {
+    wasm.run_script("window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });")
+}
+
+/* Helper Types */
+
+const div = (config) => element({
+    type: "div",
+    ...config
+})
+
+const p = (config) => element({
+    type: "p",
+    ...config
+})
+
+const span = (config) => element({
+    type: "span",
+    ...config
+})
+
+const h1 = (config) => element({
+    type: "h1",
+    ...config
+})
+
+const h2 = (config) => element({
+    type: "h2",
+    ...config
+})
+
+const h3 = (config) => element({
+    type: "h3",
+    ...config
+})
+
+const h4 = (config) => element({
+    type: "h4",
+    ...config
+})
+
+const h5 = (config) => element({
+    type: "h5",
+    ...config
+})
+
+const img = (config) => element({
+    type: "img",
+    ...config
+})
+
+const button = (config) => element({
+    type: "button",
+    ...config
+})
+
+const input = (config) => element({
+    type: "input",
+    ...config
+})
+
+const label = (config) => element({
+    type: "label",
+    ...config
+})
+
+const form = (config) => element({
+    type: "form",
+    ...config
+})
