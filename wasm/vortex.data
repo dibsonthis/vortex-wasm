@@ -404,6 +404,7 @@ const react = (el: Element, _ref: Ref | Element, fn: (data) => Config) => {
     return el
 }import [
     ref,
+    appendOnChange,
     element,
     reactive,
     react,
@@ -423,15 +424,61 @@ const react = (el: Element, _ref: Ref | Element, fn: (data) => Config) => {
     label
 ] : "components/whirlwind"
 
-import [chars, join, contains, lower, upper] : string
+import [chars, join, contains, lower, upper, replaceAll] : string
 import [forEach, map, filter] : functional
 import json
 import wasm
 import os
+import io
 
 var breed_data = {}
 var prev_market_price = 0
 var prev_market_price_ref = ref(0)
+
+var template = io.readf("template.html")
+
+var data = {
+    x: 10,
+}
+
+const methods = {
+    incr: () => {
+        data.x += 1
+        println(data.x)
+    },
+    decr: () => {
+        data.x -= 1
+        println(data.x)
+    }
+}
+
+const closure = wasm.make_closure(methods.incr)
+const fn_str =  f"Module.ccall('vortex_eval','void',['number'],[${closure}])"
+
+const closure2 = wasm.make_closure(methods.decr)
+const fn_str2 =  f"Module.ccall('vortex_eval','void',['number'],[${closure2}])"
+
+var template_ = template.replaceAll("{{ incr }}", fn_str)
+template_ = template_.replaceAll("{{ decr }}", fn_str2)
+template_ = template_.replaceAll("{{ x }}", string(data.x))
+
+const d = div({
+    innerHTML: template_
+})
+
+data.x::onChange((e) => {
+    var template_ = template.replaceAll("{{ incr }}", fn_str)
+    template_ = template_.replaceAll("{{ decr }}", fn_str2)
+    template_ = template_.replaceAll("{{ x }}", string(data.x))
+
+    d.update({
+        innerHTML: template_
+    })
+})
+
+prev_market_price_ref.appendOnChange((e) => {
+    data.x = e.current
+})
 
 const loader = img({
     src: "src/resources/loader.gif",
@@ -1262,4 +1309,9 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
 ¿å/ók½wk¿ß»1ù«¿•Ë¿ë[4ÿkéK¾÷Û,lÀİ+ÀÅJ½\«¡	Œ+,ÁSKÁ<*ŒÁ}«Áı«.á{ìñ+Â#l%Ü'<.ìÁÑ+-¬À)¬Â,Ãì&ç++lÂ9\&/ÌÀãK3¬*A,Ä<EÌÁ5LÂ7¬Ä?Œ#GŒÄ\Qü"SÃ×kK|(Mì»OLÄ!\)âš=WÜ!eŒgŒÆü+kÌÆa,ÆÇÊmìÆÜZ-šŠÇslÅ{LÃsÚy¬ÇlÊ-wìÇC¬l,‰¼…ŒÃ_ŠÈƒLÈÌÅş‡ÌÇfú‘lÈEêÂL
 ìÉ+
 Ê?*Ê—|“LÉ§ÌÉ©ŒÉŸÌÊ%£,ÉŠ¿³LË¯¬Ê¥ŒË*µlË÷ù/:Á,ÌÙi0şIÇŒÌ©I1áYÍLÊ˜)2ÂiÓLÍt	3¡yÙ¬ÍPé¼}‰ßÎÚ	Á~éÍ»ì\é6ÿ©åLÇ
-»tÚñË9}3pÏú,üÜÏpğÏ í=ĞlPĞ­Ğh°ĞmıĞdÑ=ë\ÑvpÑM½Ñş¼ÈÍ Ò"]Å$]Ò|Ò}Ò*ÒûÛÒ°Å0½Ò<Ó€PÓ6ÓÅ›Ó‚°¼<=\ú3ÓŒP£B-	)ZÔ”PH½ÔLİÔNıÔPÕR=ÕT]ÕV}ÕXÕZ½Õ\İÕ^ıÕ`Íd  ;
+»tÚñË9}3pÏú,üÜÏpğÏ í=ĞlPĞ­Ğh°ĞmıĞdÑ=ë\ÑvpÑM½Ñş¼ÈÍ Ò"]Å$]Ò|Ò}Ò*ÒûÛÒ°Å0½Ò<Ó€PÓ6ÓÅ›Ó‚°¼<=\ú3ÓŒP£B-	)ZÔ”PH½ÔLİÔNıÔPÕR=ÕT]ÕV}ÕXÕZ½Õ\İÕ^ıÕ`Íd  ;<div>
+    <p style="background-color: aqua;"> {{ x }} </p>
+    <p style='color: red;'> {{ x }} </p>
+    <button onclick="{{ incr }}"> Increase </button>
+    <button onclick="{{ decr }}"> Decrease </button>
+</div>
