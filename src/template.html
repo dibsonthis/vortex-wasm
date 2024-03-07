@@ -3,10 +3,9 @@
     <input 
         #nameInput 
         @input: updateName 
-        $margin: 20px
-        $padding: 30px
+        $margin: 5px
     />
-    <p #var> Hi, my name is {{ name }}, my age is {{ age }} </p>
+    <p #var $fontWeight: bold> Hi, my name is {{ name }}, my age is {{ age }} </p>
     <button 
         #incrButton 
         @click:incr

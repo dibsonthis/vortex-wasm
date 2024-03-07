@@ -594,6 +594,18 @@ const extractProperties = (elem_type) => {
             styles[style_type.trim()] = style_value.trim()
         }
 
+        if (elem_type[index] == "/" and elem_type[index + 1] == "/") {
+            while (true) {
+                if (elem_type[index] == "\n") {
+                    break
+                }
+                if (!elem_type[index] or elem_type[index] == ">") {
+                    error("Malformed comment")
+                }
+                index += 1
+            }
+        }
+
         index += 1
     }
 

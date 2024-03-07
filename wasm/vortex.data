@@ -594,6 +594,18 @@ const extractProperties = (elem_type) => {
             styles[style_type.trim()] = style_value.trim()
         }
 
+        if (elem_type[index] == "/" and elem_type[index + 1] == "/") {
+            while (true) {
+                if (elem_type[index] == "\n") {
+                    break
+                }
+                if (!elem_type[index] or elem_type[index] == ">") {
+                    error("Malformed comment")
+                }
+                index += 1
+            }
+        }
+
         index += 1
     }
 
@@ -661,7 +673,6 @@ const createElement = (html, data = {}, methods = {}) => {
 
     tags.forEach((tag) => {
         const props = tag.type.extractProperties();
-        println(props.styles)
         const id = props.id;
         var dependencies = []
         if (tag.is_start) {
@@ -1696,10 +1707,9 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
     <input 
         #nameInput 
         @input: updateName 
-        $margin: 20px
-        $padding: 30px
+        $margin: 5px
     />
-    <p #var> Hi, my name is {{ name }}, my age is {{ age }} </p>
+    <p #var $fontWeight: bold> Hi, my name is {{ name }}, my age is {{ age }} </p>
     <button 
         #incrButton 
         @click:incr
