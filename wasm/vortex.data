@@ -258,6 +258,10 @@ const text = (element) => {
     return wasm.run_script_string(f"document.getElementById(`${element.id}`).innerText")
 }
 
+const attribute = (element, attr) => {
+    return wasm.run_script_string(f"document.getElementById(`${element.id}`).${attr}")
+}
+
 const click = (element) => {
     return wasm.run_script(f"document.getElementById(`${element.id}`).click()")
 }
@@ -521,7 +525,8 @@ const extractProperties = (elem) => {
             id: None,
             events: {},
             styles: {},
-            props: {}
+            props: {},
+            inner: {}
         }
     }
     var index = 0
@@ -529,6 +534,7 @@ const extractProperties = (elem) => {
     var events = {}
     var styles = {}
     var props = {}
+    var inner = {}
     const elem_type = elem.type.substring(1, elem.type.length()).trim().substring(elem.name.length(), elem.type.length())
     while (elem_type[index]) {
         if (elem_type[index] == "#") {
@@ -644,6 +650,57 @@ const extractProperties = (elem) => {
             styles[style_type.trim()] = style_value.trim()
         }
 
+        else if (elem_type[index] == "%") {
+            index += 1
+            var inner_type = ""
+            var inner_value = ""
+            while (elem_type[index] != ":") {
+                inner_type += elem_type[index]
+                index += 1
+                if (!elem_type[index] or elem_type[index] == ">") {
+                    error("Malformed $ handler")
+                }
+            }
+            index += 1
+            var hit_first_letter = false
+            var is_quote = false
+            while (true) {
+                if (!elem_type[index].is_whitespace()) {
+                    hit_first_letter = true
+                }
+
+                if (elem_type[index].is_whitespace() and !hit_first_letter) {
+                    index += 1
+                    continue
+                }
+
+                if (elem_type[index].is_whitespace() or elem_type[index] == ">") {
+                    break;
+                }
+
+                if (elem_type[index] == "\"") {
+                    is_quote = true
+                    index += 1
+                    while (true) {
+                        if (elem_type[index] == "\"") {
+                            index += 1
+                            break
+                        }
+                        inner_value += elem_type[index]
+                        index += 1
+                    }
+                }
+
+                if (is_quote) {
+                    break
+                }
+
+                inner_value += elem_type[index]
+                index += 1
+            }
+            inner[inner_type.trim()] = inner_value.trim()
+        }
+
         else if (elem_type[index] == "/" and elem_type[index + 1] == "/") {
             while (true) {
                 if (elem_type[index] == "\n") {
@@ -714,7 +771,8 @@ const extractProperties = (elem) => {
         id: id,
         events: events,
         styles: styles,
-        props: props
+        props: props,
+        inner: inner
     }
 }
 
@@ -789,6 +847,11 @@ const createElement = (html, data = {}, methods = {}) => {
             }
 
             var e = element(config)
+
+            if (tag.name == "style") {
+                return
+            }
+
             if (stack.length() == 0) {
                 if (parent_exists) {
                     error("Only one parent allowed", "TemplateError")
@@ -805,19 +868,27 @@ const createElement = (html, data = {}, methods = {}) => {
             // We apply an onChange hook here so that whenever these variables change
             // It updates the corresponding element
 
+            var _data = data
+
             dependencies.forEach((var) => {
                 const currentOnChange = data[var].info().onChangeHook
                 if (currentOnChange) {
                     data[var]::onChange((_e) => {
                         currentOnChange(_e)
-                        const parsed_content = tag.content.parseContent(data)
+                        if (e._data) {
+                            _data = {...e._data, ...data}
+                        }
+                        const parsed_content = tag.content.parseContent(_data)
                         e.update({
                             innerHTML: parsed_content.content
                         })
                     })
                 } else {
                     data[var]::onChange((_e) => {
-                        const parsed_content = tag.content.parseContent(data)
+                        if (e._data) {
+                            _data = {...e._data, ...data}
+                        }
+                        const parsed_content = tag.content.parseContent(_data)
                         e.update({
                             innerHTML: parsed_content.content
                         })
@@ -862,11 +933,286 @@ const createElement = (html, data = {}, methods = {}) => {
             if (props.props) {
                 e.update(props.props)
             }
+
+            // If we have inner events, we apply them here
+            props.inner.info().keys.forEach((key) => {
+                const value = props.inner[key]
+                if (key == "if") {
+                    const predicate = data[value]
+                    const predicateOnChange = predicate.info().onChangeHook
+                    if (predicateOnChange) {
+                        data[value]::onChange((info) => {
+                            predicateOnChange(info)
+                            if (info.current) {
+                                e.update({
+                                    style: {
+                                        display: "block"
+                                    }
+                                })
+                            } else {
+                                e.update({
+                                    style: {
+                                        display: "none"
+                                    }
+                                })
+                            }
+                        })
+                    } else {
+                        data[value]::onChange((info) => {
+                            if (info.current) {
+                                e.update({
+                                    style: {
+                                        display: "block"
+                                    }
+                                })
+                            } else {
+                                e.update({
+                                    style: {
+                                        display: "none"
+                                    }
+                                })
+                            }
+                        })
+                    }
+                }
+                if (key == "for") {
+                    var value = props.inner[key]
+                    if (value.trim() == "") {
+                        error("Malformed for loop")
+                    }
+                    var values = value.split(",")
+                    var list = values[0].trim()
+                    var current_parent = stack[stack.length() - 1]
+
+                    if (values.length() == 1) {
+                        for (data[list], i, v) {
+                            var temp_data = {...data}
+                            const content = tag.content.parseContent(temp_data)
+                            var dependencies = content.variables
+                            dependencies.append(list)
+                            
+                            // We've already created the first element, so we
+                            // just need to update it
+
+                            if (i == 0) {
+                                e.update({
+                                    innerText: content.content
+                                })
+                                e._data = temp_data
+                                continue
+                            }
+
+                            const new_id = e.id + "_" + string(i)
+
+                            var new_element = {
+                                ...e,
+                                id: new_id,
+                                _data: temp_data
+                            }
+
+                            const script = f"
+                                const originalElement = document.getElementById('${e.id}');
+                                const clonedElement = originalElement.cloneNode(true);
+                                clonedElement.id = '${new_id}';
+                                clonedElement.innerText = '${content.content}';
+                                document.getElementById('${current_parent.id}').appendChild(clonedElement)
+                            "
+
+                            wasm.run_script(script)
+
+                            var _data = data
+
+                            dependencies.forEach((var) => {
+                                // If it doesn't exist in data
+                                // It's a temporary, so we don't care about hooking it
+                                if (!data[var]) {
+                                    return
+                                }
+                                const currentOnChange = data[var].info().onChangeHook
+                                if (currentOnChange) {
+                                    data[var]::onChange((_e) => {
+                                        currentOnChange(_e)
+                                        if (new_element._data) {
+                                            _data = {...new_element._data, ...data}
+                                        }
+                                        const parsed_content = tag.content.parseContent(_data)
+                                        new_element.update({
+                                            innerHTML: parsed_content.content
+                                        })
+                                    })
+                                } else {
+                                    data[var]::onChange((_e) => {
+                                        if (new_element._data) {
+                                            _data = {...new_element._data, ...data}
+                                        }
+                                        const parsed_content = tag.content.parseContent(_data)
+                                        new_element.update({
+                                            innerHTML: parsed_content.content
+                                        })
+                                    })
+                                }
+                            })
+                        }
+                    } else if (values.length() == 2) {
+                        var iterator = values[1].trim()
+
+                        for (data[list], i, v) {
+                            var temp_data = {...data}
+                            temp_data[iterator] = v
+                            const content = tag.content.parseContent(temp_data)
+                            var dependencies = content.variables
+                            dependencies.append(list)
+                            
+                            // We've already created the first element, so we
+                            // just need to update it
+
+                            if (i == 0) {
+                                e.update({
+                                    innerText: content.content
+                                })
+                                e._data = temp_data
+                                continue
+                            }
+
+                            const new_id = e.id + "_" + string(i)
+
+                            var new_element = {
+                                ...e,
+                                id: new_id,
+                                _data: temp_data
+                            }
+
+                            const script = f"
+                                const originalElement = document.getElementById('${e.id}');
+                                const clonedElement = originalElement.cloneNode(true);
+                                clonedElement.id = '${new_id}';
+                                clonedElement.innerText = '${content.content}';
+                                document.getElementById('${current_parent.id}').appendChild(clonedElement)
+                            "
+
+                            wasm.run_script(script)
+
+                            var _data = data
+
+                            dependencies.forEach((var) => {
+                                // If it doesn't exist in data
+                                // It's a temporary, so we don't care about hooking it
+                                if (!data[var]) {
+                                    return
+                                }
+                                const currentOnChange = data[var].info().onChangeHook
+                                if (currentOnChange) {
+                                    data[var]::onChange((_e) => {
+                                        currentOnChange(_e)
+                                        if (new_element._data) {
+                                            _data = {...new_element._data, ...data}
+                                        }
+                                        const parsed_content = tag.content.parseContent(_data)
+                                        new_element.update({
+                                            innerHTML: parsed_content.content
+                                        })
+                                    })
+                                } else {
+                                    data[var]::onChange((_e) => {
+                                        if (new_element._data) {
+                                            _data = {...new_element._data, ...data}
+                                        }
+                                        const parsed_content = tag.content.parseContent(_data)
+                                        new_element.update({
+                                            innerHTML: parsed_content.content
+                                        })
+                                    })
+                                }
+                            })
+                        }
+                    } else if (values.length() == 3) {
+
+                        var iterator = values[1].trim()
+                        var _index = values[2].trim()
+
+                        for (data[list], i, v) {
+                            var temp_data = {...data}
+                            temp_data[iterator] = v
+                            temp_data[_index] = i
+
+                            const content = tag.content.parseContent(temp_data)
+                            var dependencies = content.variables
+                            dependencies.append(list)
+                            
+                            // We've already created the first element, so we
+                            // just need to update it
+
+                            if (i == 0) {
+                                e.update({
+                                    innerText: content.content
+                                })
+                                e._data = temp_data
+                                continue
+                            }
+
+                            const new_id = e.id + "_" + string(i)
+
+                            var new_element = {
+                                ...e,
+                                id: new_id,
+                                _data: temp_data
+                            }
+
+                            const script = f"
+                                const originalElement = document.getElementById('${e.id}');
+                                const clonedElement = originalElement.cloneNode(true);
+                                clonedElement.id = '${new_id}';
+                                clonedElement.innerText = '${content.content}';
+                                document.getElementById('${current_parent.id}').appendChild(clonedElement)
+                            "
+
+                            wasm.run_script(script)
+
+                            var _data = data
+
+                            dependencies.forEach((var) => {
+                                // If it doesn't exist in data
+                                // It's a temporary, so we don't care about hooking it
+                                if (!data[var]) {
+                                    return
+                                }
+                                const currentOnChange = data[var].info().onChangeHook
+                                if (currentOnChange) {
+                                    data[var]::onChange((_e) => {
+                                        currentOnChange(_e)
+                                        if (new_element._data) {
+                                            _data = {...new_element._data, ...data}
+                                        }
+                                        const parsed_content = tag.content.parseContent(_data)
+                                        new_element.update({
+                                            innerHTML: parsed_content.content
+                                        })
+                                    })
+                                } else {
+                                    data[var]::onChange((_e) => {
+                                        if (new_element._data) {
+                                            _data = {...new_element._data, ...data}
+                                        }
+                                        const parsed_content = tag.content.parseContent(_data)
+                                        new_element.update({
+                                            innerHTML: parsed_content.content
+                                        })
+                                    })
+                                }
+                            })
+                        }
+                    }
+                    
+                }
+            })
             
             if (!tag.self_ending) {
                 stack.append(e)
             }
         } else {
+            if (tag.name == "style") {
+                return
+            }
             var last_stack_elem = stack[stack.length() - 1]
             if (tag.name == last_stack_elem.type) {
                 stack.remove(stack.length() - 1)
@@ -902,6 +1248,7 @@ const createElement = (html, data = {}, methods = {}) => {
     createElement,
     parseContent,
     text,
+    attribute
 ] : "components/whirlwind"
 
 import [chars, split, join, contains, lower, upper, replaceAll] : string
@@ -915,7 +1262,9 @@ var template = io.readf("template.html")
 
 var data = {
     age: 45,
-    name: "John"
+    name: "John",
+    show: true,
+    nums: [1, 2, 3, 4, 5]
 }
 
 const methods = {
@@ -924,8 +1273,10 @@ const methods = {
     },
     decr: () => {
         data.age -= 1
+        data.nums = [...data.nums, 10]
     },
     changeName: () => {
+        data.show = !data.show
         if (data.name == "John") {
             data.name = "Allan"
         } else {
@@ -934,11 +1285,17 @@ const methods = {
     },
     updateName: (parent) => {
         data.name = parent.nameInput.value()
+    },
+    toggleLoader: (parent) => {
+        parent.loader.update({
+            style: {
+                display: parent.loader.attribute("style.display") == "block" and "none" or "block"
+            }
+        })
     }
 }
 
 const parent = createElement(template, data, methods)
-
 
 // var breed_data = {}
 // var prev_market_price = 0
@@ -1773,45 +2130,74 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
 ¿å/ók½wk¿ß»1ù«¿•Ë¿ë[4ÿkéK¾÷Û,lÀİ+ÀÅJ½\«¡	Œ+,ÁSKÁ<*ŒÁ}«Áı«.á{ìñ+Â#l%Ü'<.ìÁÑ+-¬À)¬Â,Ãì&ç++lÂ9\&/ÌÀãK3¬*A,Ä<EÌÁ5LÂ7¬Ä?Œ#GŒÄ\Qü"SÃ×kK|(Mì»OLÄ!\)âš=WÜ!eŒgŒÆü+kÌÆa,ÆÇÊmìÆÜZ-šŠÇslÅ{LÃsÚy¬ÇlÊ-wìÇC¬l,‰¼…ŒÃ_ŠÈƒLÈÌÅş‡ÌÇfú‘lÈEêÂL
 ìÉ+
 Ê?*Ê—|“LÉ§ÌÉ©ŒÉŸÌÊ%£,ÉŠ¿³LË¯¬Ê¥ŒË*µlË÷ù/:Á,ÌÙi0şIÇŒÌ©I1áYÍLÊ˜)2ÂiÓLÍt	3¡yÙ¬ÍPé¼}‰ßÎÚ	Á~éÍ»ì\é6ÿ©åLÇ
-»tÚñË9}3pÏú,üÜÏpğÏ í=ĞlPĞ­Ğh°ĞmıĞdÑ=ë\ÑvpÑM½Ñş¼ÈÍ Ò"]Å$]Ò|Ò}Ò*ÒûÛÒ°Å0½Ò<Ó€PÓ6ÓÅ›Ó‚°¼<=\ú3ÓŒP£B-	)ZÔ”PH½ÔLİÔNıÔPÕR=ÕT]ÕV}ÕXÕZ½Õ\İÕ^ıÕ`Íd  ;<div>
+»tÚñË9}3pÏú,üÜÏpğÏ í=ĞlPĞ­Ğh°ĞmıĞdÑ=ë\ÑvpÑM½Ñş¼ÈÍ Ò"]Å$]Ò|Ò}Ò*ÒûÛÒ°Å0½Ò<Ó€PÓ6ÓÅ›Ó‚°¼<=\ú3ÓŒP£B-	)ZÔ”PH½ÔLİÔNıÔPÕR=ÕT]ÕV}ÕXÕZ½Õ\İÕ^ıÕ`Íd  ;<style>
+    .btn {
+        padding: 10px;
+        margin: 5px;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+
+        transition: all 0.3s ease-in-out;
+        &:hover {
+            background-color: #3E95FF !important;
+        }
+    }
+</style>
+
+<div>
+    <img
+        %if: show
+        #loader 
+        src: "src/resources/cat.jpg" 
+        $width: 100px 
+        $height: 100px 
+        $display: block 
+    />
     <label $fontSize: 20px>Name:</label>
     <input 
-        #nameInput 
+        #nameInput
         @input: updateName
         $margin: 5px
-        className: "balls dicks and other stuff"
     />
-    <p #var $fontWeight: bold> Hi, my name is {{ name }}, my age is {{ age }} </p>
+    <ul>
+    <li %for: "nums, num, i">
+        {{ num }} - {{ name }}
+    </li>
+    </ul>
+    <p $fontWeight: bold> Hi, my name is {{ name }}, my age is {{ age }} </p>
     <button 
         #incrButton 
-        @click:incr
-        $backgroundColor: blue $padding: 10px
-        $margin: 5px
-        $color: white
-        $borderRadius: 10px
-        $border: none
-        $fontSize: 18px
-    > Increase </button>
+        @click: incr
+        $backgroundColor: green
+        className: btn
+    > 
+        Increase 
+    </button>
     <button 
         #decrButton 
-        @click:decr 
+        @click: decr 
         $backgroundColor: red
-        $padding: 10px
-        $margin: 5px
-        $color: white
-        $borderRadius: 10px
-        $border: none
-        $fontSize: 18px
-    > Decrease </button>
+        className: btn
+    > 
+        Decrease 
+    </button>
     <button 
         #changeName 
-        @click:changeName
+        @click: changeName
         $backgroundColor: orange
-        $padding: 10px
-        $margin: 5px
-        $color: white
-        $borderRadius: 10px
-        $border: none
-        $fontSize: 18px
-    > Change name </button>
+        className: btn
+    > 
+        Change name 
+    </button>
+    <button 
+        #toggleLoader
+        @click: toggleLoader
+        $backgroundColor: gray
+        className: btn
+    > 
+        Toggle 
+    </button>
 </div>

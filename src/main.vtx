@@ -23,6 +23,7 @@ import [
     createElement,
     parseContent,
     text,
+    attribute
 ] : "components/whirlwind"
 
 import [chars, split, join, contains, lower, upper, replaceAll] : string
@@ -36,7 +37,9 @@ var template = io.readf("template.html")
 
 var data = {
     age: 45,
-    name: "John"
+    name: "John",
+    show: true,
+    nums: [1, 2, 3, 4, 5]
 }
 
 const methods = {
@@ -45,8 +48,10 @@ const methods = {
     },
     decr: () => {
         data.age -= 1
+        data.nums = [...data.nums, 10]
     },
     changeName: () => {
+        data.show = !data.show
         if (data.name == "John") {
             data.name = "Allan"
         } else {
@@ -55,11 +60,17 @@ const methods = {
     },
     updateName: (parent) => {
         data.name = parent.nameInput.value()
+    },
+    toggleLoader: (parent) => {
+        parent.loader.update({
+            style: {
+                display: parent.loader.attribute("style.display") == "block" and "none" or "block"
+            }
+        })
     }
 }
 
 const parent = createElement(template, data, methods)
-
 
 // var breed_data = {}
 // var prev_market_price = 0

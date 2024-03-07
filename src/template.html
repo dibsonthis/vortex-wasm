@@ -1,42 +1,71 @@
+<style>
+    .btn {
+        padding: 10px;
+        margin: 5px;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+
+        transition: all 0.3s ease-in-out;
+        &:hover {
+            background-color: #3E95FF !important;
+        }
+    }
+</style>
+
 <div>
+    <img
+        %if: show
+        #loader 
+        src: "src/resources/cat.jpg" 
+        $width: 100px 
+        $height: 100px 
+        $display: block 
+    />
     <label $fontSize: 20px>Name:</label>
     <input 
-        #nameInput 
+        #nameInput
         @input: updateName
         $margin: 5px
-        className: "balls"
     />
-    <p #var $fontWeight: bold> Hi, my name is {{ name }}, my age is {{ age }} </p>
+    <ul>
+    <li %for: "nums, num, i">
+        {{ num }} - {{ name }}
+    </li>
+    </ul>
+    <p $fontWeight: bold> Hi, my name is {{ name }}, my age is {{ age }} </p>
     <button 
         #incrButton 
-        @click:incr
-        $backgroundColor: blue $padding: 10px
-        $margin: 5px
-        $color: white
-        $borderRadius: 10px
-        $border: none
-        $fontSize: 18px
-    > Increase </button>
+        @click: incr
+        $backgroundColor: green
+        className: btn
+    > 
+        Increase 
+    </button>
     <button 
         #decrButton 
-        @click:decr 
+        @click: decr 
         $backgroundColor: red
-        $padding: 10px
-        $margin: 5px
-        $color: white
-        $borderRadius: 10px
-        $border: none
-        $fontSize: 18px
-    > Decrease </button>
+        className: btn
+    > 
+        Decrease 
+    </button>
     <button 
         #changeName 
-        @click:changeName
+        @click: changeName
         $backgroundColor: orange
-        $padding: 10px
-        $margin: 5px
-        $color: white
-        $borderRadius: 10px
-        $border: none
-        $fontSize: 18px
-    > Change name </button>
+        className: btn
+    > 
+        Change name 
+    </button>
+    <button 
+        #toggleLoader
+        @click: toggleLoader
+        $backgroundColor: gray
+        className: btn
+    > 
+        Toggle 
+    </button>
 </div>
