@@ -60,42 +60,6 @@ const methods = {
 
 const parent = createElement(template, data, methods)
 
-// parent.incrButton.update({
-//     style: {
-//         backgroundColor: "blue",
-//         padding: "10px",
-//         margin: "5px",
-//         color: "white",
-//         borderRadius: "10px",
-//         border: "none",
-//         fontSize: "18px"
-//     }
-// })
-
-// parent.decrButton.update({
-//     style: {
-//         backgroundColor: "red",
-//         padding: "10px",
-//         margin: "5px",
-//         color: "white",
-//         borderRadius: "10px",
-//         border: "none",
-//         fontSize: "18px"
-//     }
-// })
-
-// parent.changeName.update({
-//     style: {
-//         backgroundColor: "orange",
-//         padding: "10px",
-//         margin: "5px",
-//         color: "white",
-//         borderRadius: "10px",
-//         border: "none",
-//         fontSize: "18px"
-//     }
-// })
-
 
 // var breed_data = {}
 // var prev_market_price = 0

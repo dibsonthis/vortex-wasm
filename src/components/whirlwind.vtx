@@ -555,6 +555,7 @@ const extractProperties = (elem) => {
             }
             index += 1
             var hit_first_letter = false
+            var is_quote = false
             while (true) {
                 if (!elem_type[index].is_whitespace()) {
                     hit_first_letter = true
@@ -568,6 +569,24 @@ const extractProperties = (elem) => {
                 if (elem_type[index].is_whitespace() or elem_type[index] == ">") {
                     break;
                 }
+
+                if (elem_type[index] == "\"") {
+                    is_quote = true
+                    index += 1
+                    while (true) {
+                        if (elem_type[index] == "\"") {
+                            index += 1
+                            break
+                        }
+                        func_name += elem_type[index]
+                        index += 1
+                    }
+                }
+
+                if (is_quote) {
+                    break
+                }
+
                 func_name += elem_type[index]
                 index += 1
             }
@@ -587,6 +606,7 @@ const extractProperties = (elem) => {
             }
             index += 1
             var hit_first_letter = false
+            var is_quote = false
             while (true) {
                 if (!elem_type[index].is_whitespace()) {
                     hit_first_letter = true
@@ -600,6 +620,24 @@ const extractProperties = (elem) => {
                 if (elem_type[index].is_whitespace() or elem_type[index] == ">") {
                     break;
                 }
+
+                if (elem_type[index] == "\"") {
+                    is_quote = true
+                    index += 1
+                    while (true) {
+                        if (elem_type[index] == "\"") {
+                            index += 1
+                            break
+                        }
+                        style_value += elem_type[index]
+                        index += 1
+                    }
+                }
+
+                if (is_quote) {
+                    break
+                }
+
                 style_value += elem_type[index]
                 index += 1
             }
@@ -631,6 +669,7 @@ const extractProperties = (elem) => {
             }
             index += 1
             var hit_first_letter = false
+            var is_quote = false
             while (true) {
                 if (!elem_type[index].is_whitespace()) {
                     hit_first_letter = true
@@ -644,6 +683,24 @@ const extractProperties = (elem) => {
                 if (elem_type[index].is_whitespace() or elem_type[index] == ">") {
                     break;
                 }
+
+                if (elem_type[index] == "\"") {
+                    is_quote = true
+                    index += 1
+                    while (true) {
+                        if (elem_type[index] == "\"") {
+                            index += 1
+                            break
+                        }
+                        prop_value += elem_type[index]
+                        index += 1
+                    }
+                }
+
+                if (is_quote) {
+                    break
+                }
+
                 prop_value += elem_type[index]
                 index += 1
             }
@@ -768,6 +825,11 @@ const createElement = (html, data = {}, methods = {}) => {
                 }
             })
 
+            // If we have styles, we apply them here
+            e.update({
+                style: props.styles
+            })
+
             // If we have events, we apply them here
             props.events.info().keys.forEach((key) => {
                 const method_name = props.events[key]
@@ -796,13 +858,10 @@ const createElement = (html, data = {}, methods = {}) => {
                 }
             })
 
-            // If we have styles, we apply them here
-            e.update({
-                style: props.styles
-            })
-
             // If we have props, we apply them here
-            e.update(props.props)
+            if (props.props) {
+                e.update(props.props)
+            }
             
             if (!tag.self_ending) {
                 stack.append(e)
