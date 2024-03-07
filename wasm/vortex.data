@@ -2,7 +2,7 @@ import wasm
 import math
 import random
 import [forEach] : functional
-import [substring, trim, split] : string
+import [substring, trim, split, replaceAll] : string
 
 type element = (config = {}, parent = None) => {
     config.type or (config.type = "div")
@@ -536,7 +536,54 @@ const extractId = (elem_type) => {
     }
 }
 
-const createElement = (html) => {
+const parseContent = (content, data = {}) => {
+    var index = 0
+    var variables = []
+    var substrings = []
+    var new_content = content;
+    var diff = 0
+    while (content[index]) {
+        if (content[index] == "{" and content[index + 1] == "{") {
+            var start_index = index
+            var end_index = index
+            var variable = ""
+            index += 2
+            while (true) {
+                if (content[index] == "}" and content[index + 1] == "}") {
+                    index += 2
+                    end_index = index
+                    break
+                }
+                if (!content[index]) {
+                    error("Missing }} in template variable")
+                }
+                variable += content[index]
+                index += 1
+            }
+
+            variable = variable.trim().split(" ");
+            if (variable.length() != 1) {
+                error("Template variables must contain one value")
+            }
+            variable = variable[0]
+            const substr = new_content.substring(start_index, end_index - start_index)
+            substrings.append(substr)
+            variables.append(variable)
+        }
+        index += 1
+    }
+
+    variables.forEach((var, i) => {
+        new_content = new_content.replaceAll(substrings[i], string(data[var]))
+    })
+
+    return {
+        variables: variables,
+        content: new_content
+    }
+}
+
+const createElement = (html, data = {}) => {
     const tags = parseHTML(html)
     verifyHTML(tags)
 
@@ -546,13 +593,16 @@ const createElement = (html) => {
 
     tags.forEach((tag) => {
         const id = tag.type.extractId();
+        var dependencies = []
         if (tag.is_start) {
             var config = {
                 type: tag.name
             }
         
             if (tag.content) {
-                config.innerText = tag.content
+                const parsed_content = tag.content.parseContent(data)
+                config.innerHTML = parsed_content.content
+                dependencies = parsed_content.variables
             }
 
             var e = element(config)
@@ -568,6 +618,29 @@ const createElement = (html) => {
                 wasm.run_script(f"document.getElementById(`${last_stack_elem.id}`).appendChild(document.getElementById(`${e.id}`));")
                 id and (last_stack_elem[id] = e)
             }
+
+            // We apply an onChange hook here so that whenever these variables change
+            // It updates the corresponding element
+
+            dependencies.forEach((var) => {
+                const currentOnChange = data[var].info().onChangeHook
+                if (currentOnChange) {
+                    data[var]::onChange((_e) => {
+                        currentOnChange(_e)
+                        const parsed_content = tag.content.parseContent(data)
+                        e.update({
+                            innerHTML: parsed_content.content
+                        })
+                    })
+                } else {
+                    data[var]::onChange((_e) => {
+                        const parsed_content = tag.content.parseContent(data)
+                        e.update({
+                            innerHTML: parsed_content.content
+                        })
+                    })
+                }
+            })
             
             stack.append(e)
         } else {
@@ -581,36 +654,6 @@ const createElement = (html) => {
     })
 
     return parent
-}
-
-const parseContent = (content, data = {}) => {
-    var index = 0
-    var variables = []
-    while (content[index]) {
-        if (content[index] == "{" and content[index + 1] == "{") {
-            var variable = ""
-            index += 2
-            while (true) {
-                if (content[index] == "}" and content[index + 1] == "}") {
-                    break
-                }
-                if (!content[index]) {
-                    error("Missing }} in template variable")
-                }
-                variable += content[index]
-                index += 1
-            }
-
-            variable = variable.trim().split(" ");
-            if (variable.length() != 1) {
-                error("Template variables must contain one value")
-            }
-            variables.append(variable[0])
-        }
-        index += 1
-    }
-
-    return variables
 }import [
     ref,
     appendOnChange,
@@ -647,34 +690,26 @@ import io
 
 var template = io.readf("template.html")
 
-const parent = createElement(template)
-
 var data = {
     x: 10,
+    name: "John"
 }
+
+const parent = createElement(template, data)
 
 const methods = {
     incr: () => {
         data.x += 1
-        parent.var.update({
-            innerHTML: data.x
-        })
         println(data.x)
     },
     decr: () => {
         data.x -= 1
-        parent.var.update({
-            innerHTML: data.x
-        })
         println(data.x)
+    },
+    changeName: () => {
+        data.name = "Allan"
     }
 }
-
-// parent.var.update({
-//     innerHTML: data.x
-// })
-
-println(parseContent("<p #var> {{ x }} - {{ hello_world }} </p>"))
 
 parent.incrButton.update({
     onClick: methods.incr,
@@ -701,6 +736,20 @@ parent.decrButton.update({
         fontSize: "18px"
     }
 })
+
+parent.changeName.update({
+    onClick: methods.changeName,
+    style: {
+        backgroundColor: "orange",
+        padding: "10px",
+        margin: "5px",
+        color: "white",
+        borderRadius: "10px",
+        border: "none",
+        fontSize: "18px"
+    }
+})
+
 
 // var breed_data = {}
 // var prev_market_price = 0
@@ -1536,7 +1585,8 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
 ìÉ+
 Ê?*Ê—|“LÉ§ÌÉ©ŒÉŸÌÊ%£,ÉŠ¿³LË¯¬Ê¥ŒË*µlË÷ù/:Á,ÌÙi0şIÇŒÌ©I1áYÍLÊ˜)2ÂiÓLÍt	3¡yÙ¬ÍPé¼}‰ßÎÚ	Á~éÍ»ì\é6ÿ©åLÇ
 »tÚñË9}3pÏú,üÜÏpğÏ í=ĞlPĞ­Ğh°ĞmıĞdÑ=ë\ÑvpÑM½Ñş¼ÈÍ Ò"]Å$]Ò|Ò}Ò*ÒûÛÒ°Å0½Ò<Ó€PÓ6ÓÅ›Ó‚°¼<=\ú3ÓŒP£B-	)ZÔ”PH½ÔLİÔNıÔPÕR=ÕT]ÕV}ÕXÕZ½Õ\İÕ^ıÕ`Íd  ;<div>
-    <p #var> {{ x }} </p>
+    <p #var> Hi, my name is {{name}}, my age is {{x}} </p>
     <button #incrButton> Increase </button>
     <button #decrButton> Decrease </button>
+    <button #changeName> Change name </button>
 </div>

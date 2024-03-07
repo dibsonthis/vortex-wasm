@@ -34,34 +34,26 @@ import io
 
 var template = io.readf("template.html")
 
-const parent = createElement(template)
-
 var data = {
     x: 10,
+    name: "John"
 }
+
+const parent = createElement(template, data)
 
 const methods = {
     incr: () => {
         data.x += 1
-        parent.var.update({
-            innerHTML: data.x
-        })
         println(data.x)
     },
     decr: () => {
         data.x -= 1
-        parent.var.update({
-            innerHTML: data.x
-        })
         println(data.x)
+    },
+    changeName: () => {
+        data.name = "Allan"
     }
 }
-
-// parent.var.update({
-//     innerHTML: data.x
-// })
-
-println(parseContent("<p #var> {{ x }} - {{ hello_world }} </p>"))
 
 parent.incrButton.update({
     onClick: methods.incr,
@@ -88,6 +80,20 @@ parent.decrButton.update({
         fontSize: "18px"
     }
 })
+
+parent.changeName.update({
+    onClick: methods.changeName,
+    style: {
+        backgroundColor: "orange",
+        padding: "10px",
+        margin: "5px",
+        color: "white",
+        borderRadius: "10px",
+        border: "none",
+        fontSize: "18px"
+    }
+})
+
 
 // var breed_data = {}
 // var prev_market_price = 0
