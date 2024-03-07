@@ -35,20 +35,16 @@ import io
 var template = io.readf("template.html")
 
 var data = {
-    x: 10,
+    age: 45,
     name: "John"
 }
 
-const parent = createElement(template, data)
-
 const methods = {
     incr: () => {
-        data.x += 1
-        println(data.x)
+        data.age += 1
     },
     decr: () => {
-        data.x -= 1
-        println(data.x)
+        data.age -= 1
     },
     changeName: () => {
         if (data.name == "John") {
@@ -56,53 +52,49 @@ const methods = {
         } else {
             data.name = "John"
         }
+    },
+    updateName: (parent) => {
+        data.name = parent.nameInput.value()
     }
 }
 
-parent.nameInput.update({
-    onInput: () => {
-        data.name = parent.nameInput.value()
-    }
-})
+const parent = createElement(template, data, methods)
 
-parent.incrButton.update({
-    onClick: methods.incr,
-    style: {
-        backgroundColor: "blue",
-        padding: "10px",
-        margin: "5px",
-        color: "white",
-        borderRadius: "10px",
-        border: "none",
-        fontSize: "18px"
-    }
-})
+// parent.incrButton.update({
+//     style: {
+//         backgroundColor: "blue",
+//         padding: "10px",
+//         margin: "5px",
+//         color: "white",
+//         borderRadius: "10px",
+//         border: "none",
+//         fontSize: "18px"
+//     }
+// })
 
-parent.decrButton.update({
-    onClick: methods.decr,
-    style: {
-        backgroundColor: "red",
-        padding: "10px",
-        margin: "5px",
-        color: "white",
-        borderRadius: "10px",
-        border: "none",
-        fontSize: "18px"
-    }
-})
+// parent.decrButton.update({
+//     style: {
+//         backgroundColor: "red",
+//         padding: "10px",
+//         margin: "5px",
+//         color: "white",
+//         borderRadius: "10px",
+//         border: "none",
+//         fontSize: "18px"
+//     }
+// })
 
-parent.changeName.update({
-    onClick: methods.changeName,
-    style: {
-        backgroundColor: "orange",
-        padding: "10px",
-        margin: "5px",
-        color: "white",
-        borderRadius: "10px",
-        border: "none",
-        fontSize: "18px"
-    }
-})
+// parent.changeName.update({
+//     style: {
+//         backgroundColor: "orange",
+//         padding: "10px",
+//         margin: "5px",
+//         color: "white",
+//         borderRadius: "10px",
+//         border: "none",
+//         fontSize: "18px"
+//     }
+// })
 
 
 // var breed_data = {}

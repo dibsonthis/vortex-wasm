@@ -513,9 +513,11 @@ const verifyHTML = (elements) => {
     }
 }
 
-const extractId = (elem_type) => {
+const extractProperties = (elem_type) => {
     var index = 0
     var id = "";
+    var events = {}
+    var styles = {}
     while (elem_type[index]) {
         if (elem_type[index] == "#") {
             index += 1
@@ -528,11 +530,77 @@ const extractId = (elem_type) => {
             }
         }
 
+        if (elem_type[index] == "@") {
+            index += 1
+            var event_type = ""
+            var func_name = ""
+            while (elem_type[index] != ":") {
+                event_type += elem_type[index]
+                index += 1
+                if (!elem_type[index] or elem_type[index] == ">") {
+                    error("Malformed @ handler")
+                }
+            }
+            index += 1
+            var hit_first_letter = false
+            while (true) {
+                if (!elem_type[index].is_whitespace()) {
+                    hit_first_letter = true
+                }
+
+                if (elem_type[index].is_whitespace() and !hit_first_letter) {
+                    index += 1
+                    continue
+                }
+
+                if (elem_type[index].is_whitespace() or elem_type[index] == ">") {
+                    break;
+                }
+                func_name += elem_type[index]
+                index += 1
+            }
+            events[event_type.trim()] = func_name.trim()
+        }
+
+        if (elem_type[index] == "$") {
+            index += 1
+            var style_type = ""
+            var style_value = ""
+            while (elem_type[index] != ":") {
+                style_type += elem_type[index]
+                index += 1
+                if (!elem_type[index] or elem_type[index] == ">") {
+                    error("Malformed $ handler")
+                }
+            }
+            index += 1
+            var hit_first_letter = false
+            while (true) {
+                if (!elem_type[index].is_whitespace()) {
+                    hit_first_letter = true
+                }
+
+                if (elem_type[index].is_whitespace() and !hit_first_letter) {
+                    index += 1
+                    continue
+                }
+
+                if (elem_type[index].is_whitespace() or elem_type[index] == ">") {
+                    break;
+                }
+                style_value += elem_type[index]
+                index += 1
+            }
+            styles[style_type.trim()] = style_value.trim()
+        }
+
         index += 1
     }
 
-    if (id != "") {
-        return id
+    return {
+        id: id,
+        events: events,
+        styles: styles
     }
 }
 
@@ -583,7 +651,7 @@ const parseContent = (content, data = {}) => {
     }
 }
 
-const createElement = (html, data = {}) => {
+const createElement = (html, data = {}, methods = {}) => {
     const tags = parseHTML(html)
     verifyHTML(tags)
 
@@ -592,7 +660,9 @@ const createElement = (html, data = {}) => {
     var parent_exists = false;
 
     tags.forEach((tag) => {
-        const id = tag.type.extractId();
+        const props = tag.type.extractProperties();
+        println(props.styles)
+        const id = props.id;
         var dependencies = []
         if (tag.is_start) {
             var config = {
@@ -640,6 +710,39 @@ const createElement = (html, data = {}) => {
                         })
                     })
                 }
+            })
+
+            // If we have events, we apply them here
+            props.events.info().keys.forEach((key) => {
+                const method_name = props.events[key]
+                var method = methods[method_name]
+                var injected_method = method
+                if (method.info().arity == 1) {
+                    // Inject the parent here
+                    injected_method = () => method(parent)
+                }
+                if (!method) {
+                    println(f"No such method '${method_name}'")
+                    return
+                }
+                if (key == "input") {
+                    e.update({
+                        onInput: injected_method
+                    })
+                } else if (key == "click") {
+                    e.update({
+                        onClick: injected_method
+                    })
+                } else if (key == "blur") {
+                    e.update({
+                        onBlur: injected_method
+                    })
+                }
+            })
+
+            // If we have styles, we apply them here
+            e.update({
+                style: props.styles
             })
             
             if (!tag.self_ending) {
@@ -693,20 +796,16 @@ import io
 var template = io.readf("template.html")
 
 var data = {
-    x: 10,
+    age: 45,
     name: "John"
 }
 
-const parent = createElement(template, data)
-
 const methods = {
     incr: () => {
-        data.x += 1
-        println(data.x)
+        data.age += 1
     },
     decr: () => {
-        data.x -= 1
-        println(data.x)
+        data.age -= 1
     },
     changeName: () => {
         if (data.name == "John") {
@@ -714,53 +813,49 @@ const methods = {
         } else {
             data.name = "John"
         }
+    },
+    updateName: (parent) => {
+        data.name = parent.nameInput.value()
     }
 }
 
-parent.nameInput.update({
-    onInput: () => {
-        data.name = parent.nameInput.value()
-    }
-})
+const parent = createElement(template, data, methods)
 
-parent.incrButton.update({
-    onClick: methods.incr,
-    style: {
-        backgroundColor: "blue",
-        padding: "10px",
-        margin: "5px",
-        color: "white",
-        borderRadius: "10px",
-        border: "none",
-        fontSize: "18px"
-    }
-})
+// parent.incrButton.update({
+//     style: {
+//         backgroundColor: "blue",
+//         padding: "10px",
+//         margin: "5px",
+//         color: "white",
+//         borderRadius: "10px",
+//         border: "none",
+//         fontSize: "18px"
+//     }
+// })
 
-parent.decrButton.update({
-    onClick: methods.decr,
-    style: {
-        backgroundColor: "red",
-        padding: "10px",
-        margin: "5px",
-        color: "white",
-        borderRadius: "10px",
-        border: "none",
-        fontSize: "18px"
-    }
-})
+// parent.decrButton.update({
+//     style: {
+//         backgroundColor: "red",
+//         padding: "10px",
+//         margin: "5px",
+//         color: "white",
+//         borderRadius: "10px",
+//         border: "none",
+//         fontSize: "18px"
+//     }
+// })
 
-parent.changeName.update({
-    onClick: methods.changeName,
-    style: {
-        backgroundColor: "orange",
-        padding: "10px",
-        margin: "5px",
-        color: "white",
-        borderRadius: "10px",
-        border: "none",
-        fontSize: "18px"
-    }
-})
+// parent.changeName.update({
+//     style: {
+//         backgroundColor: "orange",
+//         padding: "10px",
+//         margin: "5px",
+//         color: "white",
+//         borderRadius: "10px",
+//         border: "none",
+//         fontSize: "18px"
+//     }
+// })
 
 
 // var breed_data = {}
@@ -1597,9 +1692,44 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
 ìÉ+
 Ê?*Ê—|“LÉ§ÌÉ©ŒÉŸÌÊ%£,ÉŠ¿³LË¯¬Ê¥ŒË*µlË÷ù/:Á,ÌÙi0şIÇŒÌ©I1áYÍLÊ˜)2ÂiÓLÍt	3¡yÙ¬ÍPé¼}‰ßÎÚ	Á~éÍ»ì\é6ÿ©åLÇ
 »tÚñË9}3pÏú,üÜÏpğÏ í=ĞlPĞ­Ğh°ĞmıĞdÑ=ë\ÑvpÑM½Ñş¼ÈÍ Ò"]Å$]Ò|Ò}Ò*ÒûÛÒ°Å0½Ò<Ó€PÓ6ÓÅ›Ó‚°¼<=\ú3ÓŒP£B-	)ZÔ”PH½ÔLİÔNıÔPÕR=ÕT]ÕV}ÕXÕZ½Õ\İÕ^ıÕ`Íd  ;<div>
-    <input #nameInput @input:updateName />
-    <p #var> Hi, my name is {{name}}, my age is {{x}} </p>
-    <button #incrButton @click:incr> Increase </button>
-    <button #decrButton @click:decr> Decrease </button>
-    <button #changeName @click:changeName> Change name </button>
+    <label $fontSize: 20px>Name:</label>
+    <input 
+        #nameInput 
+        @input: updateName 
+        $margin: 20px
+        $padding: 30px
+    />
+    <p #var> Hi, my name is {{ name }}, my age is {{ age }} </p>
+    <button 
+        #incrButton 
+        @click:incr
+        $backgroundColor: blue $padding: 10px
+        $margin: 5px
+        $color: white
+        $borderRadius: 10px
+        $border: none
+        $fontSize: 18px
+    > Increase </button>
+    <button 
+        #decrButton 
+        @click:decr 
+        $backgroundColor: red
+        $padding: 10px
+        $margin: 5px
+        $color: white
+        $borderRadius: 10px
+        $border: none
+        $fontSize: 18px
+    > Decrease </button>
+    <button 
+        #changeName 
+        @click:changeName
+        $backgroundColor: orange
+        $padding: 10px
+        $margin: 5px
+        $color: white
+        $borderRadius: 10px
+        $border: none
+        $fontSize: 18px
+    > Change name </button>
 </div>
