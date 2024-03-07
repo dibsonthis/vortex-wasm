@@ -2,7 +2,7 @@ import wasm
 import math
 import random
 import [forEach] : functional
-import [substring, trim, split, replaceAll] : string
+import [substring, trim, split, replaceAll, contains] : string
 
 type element = (config = {}, parent = None) => {
     config.type or (config.type = "div")
@@ -513,11 +513,23 @@ const verifyHTML = (elements) => {
     }
 }
 
-const extractProperties = (elem_type) => {
+const alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+const extractProperties = (elem) => {
+    if (!elem.is_start) {
+        return {
+            id: None,
+            events: {},
+            styles: {},
+            props: {}
+        }
+    }
     var index = 0
     var id = "";
     var events = {}
     var styles = {}
+    var props = {}
+    const elem_type = elem.type.substring(1, elem.type.length()).trim().substring(elem.name.length(), elem.type.length())
     while (elem_type[index]) {
         if (elem_type[index] == "#") {
             index += 1
@@ -530,7 +542,7 @@ const extractProperties = (elem_type) => {
             }
         }
 
-        if (elem_type[index] == "@") {
+        else if (elem_type[index] == "@") {
             index += 1
             var event_type = ""
             var func_name = ""
@@ -562,7 +574,7 @@ const extractProperties = (elem_type) => {
             events[event_type.trim()] = func_name.trim()
         }
 
-        if (elem_type[index] == "$") {
+        else if (elem_type[index] == "$") {
             index += 1
             var style_type = ""
             var style_value = ""
@@ -594,9 +606,10 @@ const extractProperties = (elem_type) => {
             styles[style_type.trim()] = style_value.trim()
         }
 
-        if (elem_type[index] == "/" and elem_type[index + 1] == "/") {
+        else if (elem_type[index] == "/" and elem_type[index + 1] == "/") {
             while (true) {
                 if (elem_type[index] == "\n") {
+                    index += 1
                     break
                 }
                 if (!elem_type[index] or elem_type[index] == ">") {
@@ -606,13 +619,45 @@ const extractProperties = (elem_type) => {
             }
         }
 
+        else if (alpha.contains(elem_type[index])) {
+            var prop_name = ""
+            var prop_value = ""
+            while (elem_type[index] != ":") {
+                prop_name += elem_type[index]
+                index += 1
+                if (!elem_type[index] or elem_type[index] == ">") {
+                    error("Malformed property")
+                }
+            }
+            index += 1
+            var hit_first_letter = false
+            while (true) {
+                if (!elem_type[index].is_whitespace()) {
+                    hit_first_letter = true
+                }
+
+                if (elem_type[index].is_whitespace() and !hit_first_letter) {
+                    index += 1
+                    continue
+                }
+
+                if (elem_type[index].is_whitespace() or elem_type[index] == ">") {
+                    break;
+                }
+                prop_value += elem_type[index]
+                index += 1
+            }
+            props[prop_name.trim()] = prop_value.trim()
+        }
+
         index += 1
     }
 
     return {
         id: id,
         events: events,
-        styles: styles
+        styles: styles,
+        props: props
     }
 }
 
@@ -672,7 +717,7 @@ const createElement = (html, data = {}, methods = {}) => {
     var parent_exists = false;
 
     tags.forEach((tag) => {
-        const props = tag.type.extractProperties();
+        const props = tag.extractProperties();
         const id = props.id;
         var dependencies = []
         if (tag.is_start) {
@@ -755,6 +800,9 @@ const createElement = (html, data = {}, methods = {}) => {
             e.update({
                 style: props.styles
             })
+
+            // If we have props, we apply them here
+            e.update(props.props)
             
             if (!tag.self_ending) {
                 stack.append(e)
