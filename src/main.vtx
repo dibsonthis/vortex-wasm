@@ -51,9 +51,19 @@ const methods = {
         println(data.x)
     },
     changeName: () => {
-        data.name = "Allan"
+        if (data.name == "John") {
+            data.name = "Allan"
+        } else {
+            data.name = "John"
+        }
     }
 }
+
+parent.nameInput.update({
+    onInput: () => {
+        data.name = parent.nameInput.value()
+    }
+})
 
 parent.incrButton.update({
     onClick: methods.incr,

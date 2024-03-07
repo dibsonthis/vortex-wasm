@@ -1,6 +1,7 @@
 <div>
+    <input #nameInput @input:updateName />
     <p #var> Hi, my name is {{name}}, my age is {{x}} </p>
-    <button #incrButton> Increase </button>
-    <button #decrButton> Decrease </button>
-    <button #changeName> Change name </button>
+    <button #incrButton @click:incr> Increase </button>
+    <button #decrButton @click:decr> Decrease </button>
+    <button #changeName @click:changeName> Change name </button>
 </div>

@@ -642,7 +642,9 @@ const createElement = (html, data = {}) => {
                 }
             })
             
-            stack.append(e)
+            if (!tag.self_ending) {
+                stack.append(e)
+            }
         } else {
             var last_stack_elem = stack[stack.length() - 1]
             if (tag.name == last_stack_elem.type) {
@@ -707,9 +709,19 @@ const methods = {
         println(data.x)
     },
     changeName: () => {
-        data.name = "Allan"
+        if (data.name == "John") {
+            data.name = "Allan"
+        } else {
+            data.name = "John"
+        }
     }
 }
+
+parent.nameInput.update({
+    onInput: () => {
+        data.name = parent.nameInput.value()
+    }
+})
 
 parent.incrButton.update({
     onClick: methods.incr,
@@ -1585,8 +1597,9 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
 ìÉ+
 Ê?*Ê—|“LÉ§ÌÉ©ŒÉŸÌÊ%£,ÉŠ¿³LË¯¬Ê¥ŒË*µlË÷ù/:Á,ÌÙi0şIÇŒÌ©I1áYÍLÊ˜)2ÂiÓLÍt	3¡yÙ¬ÍPé¼}‰ßÎÚ	Á~éÍ»ì\é6ÿ©åLÇ
 »tÚñË9}3pÏú,üÜÏpğÏ í=ĞlPĞ­Ğh°ĞmıĞdÑ=ë\ÑvpÑM½Ñş¼ÈÍ Ò"]Å$]Ò|Ò}Ò*ÒûÛÒ°Å0½Ò<Ó€PÓ6ÓÅ›Ó‚°¼<=\ú3ÓŒP£B-	)ZÔ”PH½ÔLİÔNıÔPÕR=ÕT]ÕV}ÕXÕZ½Õ\İÕ^ıÕ`Íd  ;<div>
+    <input #nameInput @input:updateName />
     <p #var> Hi, my name is {{name}}, my age is {{x}} </p>
-    <button #incrButton> Increase </button>
-    <button #decrButton> Decrease </button>
-    <button #changeName> Change name </button>
+    <button #incrButton @click:incr> Increase </button>
+    <button #decrButton @click:decr> Decrease </button>
+    <button #changeName @click:changeName> Change name </button>
 </div>
