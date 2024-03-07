@@ -1,6 +1,8 @@
 import wasm
 import math
 import random
+import [forEach] : functional
+import [substring, trim, split] : string
 
 type element = (config = {}, parent = None) => {
     config.type or (config.type = "div")
@@ -8,7 +10,8 @@ type element = (config = {}, parent = None) => {
 
     var elem = {
         id: config.id,
-        type: config.type
+        type: config.type,
+        children: []
     }
 
     var script = f"var _elem = document.createElement('${config.type}');"
@@ -218,16 +221,6 @@ type element = (config = {}, parent = None) => {
                         }
                     }
                 }
-        
-                // if (type(data.children) == "Object") {
-                //     var child = element(data.children, this)
-                //     this.children.append(child)
-                // } else if (type(data.children) == "List") {
-                //     for (data.children, i, _child) {
-                //         var child = element(_child, this)
-                //         this.children.append(child)
-                //     }
-                // }
             }
 
             return this;
@@ -259,6 +252,10 @@ const removeCSSClass = (id, className) => {
 
 const value = (element) => {
     return wasm.run_script_string(f"document.getElementById(`${element.id}`).value")
+}
+
+const text = (element) => {
+    return wasm.run_script_string(f"document.getElementById(`${element.id}`).innerText")
 }
 
 const click = (element) => {
@@ -402,6 +399,218 @@ const react = (el: Element, _ref: Ref | Element, fn: (data) => Config) => {
         el.update(fn(e.current))
     })
     return el
+}
+
+/* Templating */
+
+const is_whitespace = (c) => {
+    return c == "" or c == " " or c == "\n" or c == "\t"
+}
+
+const parseHTML = (html) => {
+    var index = 0
+    var tags = []
+
+    while (index < html.length()) {
+        if (html[index] == "<" and html[index + 1] == "!") {
+            // comment
+            while (!(html[index] == "-" and html[index + 1] == ">")) {
+                index += 1
+            }
+            index += 2
+        }
+        if (html[index] == "<") {
+            // Start of a tag
+            var tag = {}
+            var tagStart = index;
+            var whitespace_index;
+            var whitespace_chars_count = 0
+            var reached_tag_name = false
+            var end_tag_index;
+            while (html[index] != ">") {
+                index += 1;
+                if (html[index] == " " and !whitespace_index) {
+                    whitespace_index = index
+                }
+
+                if (!html[index].is_whitespace() and html[index] != "/") {
+                    reached_tag_name = true
+                }
+                
+                if (!reached_tag_name) {
+                    whitespace_chars_count += 1
+                }
+
+                if (!end_tag_index and reached_tag_name and html[index].is_whitespace()) {
+                    end_tag_index = index
+                }
+            }
+
+            if (!whitespace_index) {
+                whitespace_index = index
+            }
+            if (!end_tag_index) {
+                end_tag_index = index
+            }
+            
+            const tagName = html.substring(tagStart, index - tagStart + 1)
+            const tagNameShort = html.substring(tagStart + whitespace_chars_count + 1, end_tag_index - (tagStart + whitespace_chars_count + 1))
+            tag.name = tagNameShort
+            tag.type = tagName;
+            tag.is_start = (tagName[1] != "/")
+
+            if (html[index-1] == "/") {
+                tag.self_ending = true
+                if (tag.name[tag.name.length()-1] == "/") {
+                    tag.name = tag.name.substring(0, tag.name.length() - 1)
+                }
+            }
+
+            tags.append(tag)
+        } else if (html[index] == ">") {
+            // End of a tag
+            index += 1;
+            continue;
+        } else {
+            // Text data
+            var textStart = index;
+            while (index < html.length() && html[index] != "<") {
+                index += 1;
+            }
+            // Output the text
+            var content = html.substring(textStart, index - textStart).trim()
+            if (content != "") {
+                tags[tags.length()-1].content = content
+            }
+            continue;
+        }
+        index += 1;
+    }
+
+    return tags
+}
+
+const verifyHTML = (elements) => {
+    var element_map = {}
+
+    elements.forEach((element) => {
+        if (element.self_ending) {
+            return
+        } else if (element.is_start) {
+            element_map[element.name] and (element_map[element.name] += 1) or (element_map[element.name] = 1)
+        } else {
+            if (!element_map[element.name]) {
+                error(f"Missing opening <${element.name}> tag")
+            }
+            element_map[element.name] -= 1
+        }
+    })
+    
+    for (element_map.info().keys, index, key) {
+        if (element_map[key] > 0) {
+            error(f"Missing closing </${key}> tag")
+        }
+    }
+}
+
+const extractId = (elem_type) => {
+    var index = 0
+    var id = "";
+    while (elem_type[index]) {
+        if (elem_type[index] == "#") {
+            index += 1
+            while (true) {
+                if (elem_type[index].is_whitespace() or elem_type[index] == ">") {
+                    break;
+                }
+                id += elem_type[index]
+                index += 1
+            }
+        }
+
+        index += 1
+    }
+
+    if (id != "") {
+        return id
+    }
+}
+
+const createElement = (html) => {
+    const tags = parseHTML(html)
+    verifyHTML(tags)
+
+    var stack = []
+    var parent;
+    var parent_exists = false;
+
+    tags.forEach((tag) => {
+        const id = tag.type.extractId();
+        if (tag.is_start) {
+            var config = {
+                type: tag.name
+            }
+        
+            if (tag.content) {
+                config.innerText = tag.content
+            }
+
+            var e = element(config)
+            if (stack.length() == 0) {
+                if (parent_exists) {
+                    error("Only one parent allowed", "TemplateError")
+                }
+                parent = e
+                parent_exists = true
+            } else {
+                var last_stack_elem = stack[stack.length() - 1]
+                last_stack_elem.children.append(e)
+                wasm.run_script(f"document.getElementById(`${last_stack_elem.id}`).appendChild(document.getElementById(`${e.id}`));")
+                id and (last_stack_elem[id] = e)
+            }
+            
+            stack.append(e)
+        } else {
+            var last_stack_elem = stack[stack.length() - 1]
+            if (tag.name == last_stack_elem.type) {
+                stack.remove(stack.length() - 1)
+            } else {
+                error("Malformed HTML")
+            }
+        }
+    })
+
+    return parent
+}
+
+const parseContent = (content, data = {}) => {
+    var index = 0
+    var variables = []
+    while (content[index]) {
+        if (content[index] == "{" and content[index + 1] == "{") {
+            var variable = ""
+            index += 2
+            while (true) {
+                if (content[index] == "}" and content[index + 1] == "}") {
+                    break
+                }
+                if (!content[index]) {
+                    error("Missing }} in template variable")
+                }
+                variable += content[index]
+                index += 1
+            }
+
+            variable = variable.trim().split(" ");
+            if (variable.length() != 1) {
+                error("Template variables must contain one value")
+            }
+            variables.append(variable[0])
+        }
+        index += 1
+    }
+
+    return variables
 }import [
     ref,
     appendOnChange,
@@ -421,21 +630,24 @@ const react = (el: Element, _ref: Ref | Element, fn: (data) => Config) => {
     button,
     img,
     p,
-    label
+    label,
+    parseHTML,
+    verifyHTML,
+    createElement,
+    parseContent,
+    text,
 ] : "components/whirlwind"
 
-import [chars, join, contains, lower, upper, replaceAll] : string
+import [chars, split, join, contains, lower, upper, replaceAll] : string
 import [forEach, map, filter] : functional
 import json
 import wasm
 import os
 import io
 
-var breed_data = {}
-var prev_market_price = 0
-var prev_market_price_ref = ref(0)
-
 var template = io.readf("template.html")
+
+const parent = createElement(template)
 
 var data = {
     x: 10,
@@ -444,301 +656,315 @@ var data = {
 const methods = {
     incr: () => {
         data.x += 1
+        parent.var.update({
+            innerHTML: data.x
+        })
         println(data.x)
     },
     decr: () => {
         data.x -= 1
+        parent.var.update({
+            innerHTML: data.x
+        })
         println(data.x)
     }
 }
 
-const closure = wasm.make_closure(methods.incr)
-const fn_str =  f"Module.ccall('vortex_eval','void',['number'],[${closure}])"
+// parent.var.update({
+//     innerHTML: data.x
+// })
 
-const closure2 = wasm.make_closure(methods.decr)
-const fn_str2 =  f"Module.ccall('vortex_eval','void',['number'],[${closure2}])"
+println(parseContent("<p #var> {{ x }} - {{ hello_world }} </p>"))
 
-var template_ = template.replaceAll("{{ incr }}", fn_str)
-template_ = template_.replaceAll("{{ decr }}", fn_str2)
-template_ = template_.replaceAll("{{ x }}", string(data.x))
-
-const d = div({
-    innerHTML: template_
-})
-
-data.x::onChange((e) => {
-    var template_ = template.replaceAll("{{ incr }}", fn_str)
-    template_ = template_.replaceAll("{{ decr }}", fn_str2)
-    template_ = template_.replaceAll("{{ x }}", string(data.x))
-
-    d.update({
-        innerHTML: template_
-    })
-})
-
-prev_market_price_ref.appendOnChange((e) => {
-    data.x = e.current
-})
-
-const loader = img({
-    src: "src/resources/loader.gif",
+parent.incrButton.update({
+    onClick: methods.incr,
     style: {
-        maxHeight: "100px",
-        borderRadius: "100px"
-    }
-})
-
-var marketPriceLabel = span({
-    innerHTML: "XBTUSD Market price:",
-    style: {
-        fontWeight: "bold"
-    }
-})
-
-var marketPrice = span({
-    style: {
-        marginLeft: "10px"
-    }
-})
-
-var market_div = div({
-    style: {
-        marginTop: "20px",
-        marginBottom: "20px"
-    },
-    children: [marketPriceLabel, marketPrice]
-})
-
-const socket = wasm.Socket("wss://ws.bitmex.com/realtime")
-socket.on_open(() => {
-    println("Connected")
-    // Subscribe
-    const msg = json.serialize({
-        op: "subscribe",
-        args: ["instrument:XBTUSD"]
-    })
-    socket.send(msg)
-})
-socket.on_message((message) => {
-    const res = json.parse(message)
-    if (res.data and res.data[0] and res.data[0].markPrice) {
-        const markPrice = res.data[0].markPrice
-        println(markPrice)
-        marketPrice.update({
-            innerHTML: "$" + markPrice.string(),
-            style: {
-                color: (markPrice >= prev_market_price and "green" or "red")
-            }
-        })
-        prev_market_price_ref.value = prev_market_price
-        prev_market_price = markPrice
-    }
-})
-socket.on_error(() => {
-    println(f"Error")
-})
-socket.on_close((e) => {
-    println(f"Disconnecting: ", e)
-})
-
-var buttons_div = div({
-    style: {
-        padding: "10px"
-    }
-})
-
-var filterInput = input({
-    name: "search",
-    style: {
-        margin: "10px"
-    }
-})
-
-createCSSClass("img", "
-    transition: transform 0.3s ease-in-out;
-    &:hover {
-        transform: scale(1.2) translateX(30px) rotate(10deg) !important;
-    }
-")
-
-createCSSClass("btn", "
-    transition: transform 0.3s ease-in-out;
-    &:hover {
-        background-color: #3E95FF !important;
-    }
-")
-
-const button_styles = {
-    backgroundColor: "#3e68ff",
-    color: "#fff",
-    margin: "5px",
-    fontSize: "18px",
-    fontWeight: "bold",
-    borderRadius: "15px",
-    border: "none",
-    boxSizing: "border-box",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    boxShadow: "0 3px 5px rgba(0, 0, 0, 0.18)",
-    textAlign: "center",
-    width: "200px",
-    height: "60px"
-}
-
-var image = img({
-    className: "img",
-    style: {
-        maxHeight: "400px",
+        backgroundColor: "blue",
+        padding: "10px",
+        margin: "5px",
+        color: "white",
         borderRadius: "10px",
-    },
-    transition: "transform 0.3s ease-in-out"
+        border: "none",
+        fontSize: "18px"
+    }
 })
 
-const rb = button({
-    innerHTML: "Rotate",
+parent.decrButton.update({
+    onClick: methods.decr,
     style: {
-        ...button_styles,
-        backgroundColor: "green",
-        height: "40px"
-    },
-    onClick: () => {
-        const current_r = wasm.run_script_number(f"parseFloat(document.getElementById(`${image.id}`).style.transform.replace('rotate(', '').replace('deg)', '')) || 0;")
-        image.update({
-            style: {
-                transform: f"rotate(${180 + current_r}deg)"
-            }
-        })
+        backgroundColor: "red",
+        padding: "10px",
+        margin: "5px",
+        color: "white",
+        borderRadius: "10px",
+        border: "none",
+        fontSize: "18px"
     }
 })
 
-const url = reactive({
-    type: "a",
-    innerHTML: "",
-    target: "_blank"
-}, (data) => (data.src and {
-    innerHTML: data.src,
-    href: data.src
-} or {}), image)
+// var breed_data = {}
+// var prev_market_price = 0
+// var prev_market_price_ref = ref(0)
 
-var image_div = div({
-    children: [image, p({
-        innerHTML: "",
-        style: {
-            fontFamily: "inherit",
-            fontSize: "18px",
-            fontWeight: "bold"
-        }
-    }), div({
-            children: url, 
-            style: {
-                marginBottom: "20px"
-            }}), 
-        rb]
-})
+// const loader = img({
+//     src: "src/resources/loader.gif",
+//     style: {
+//         maxHeight: "100px",
+//         borderRadius: "100px"
+//     }
+// })
 
-const search_label = label({
-    _for: filterInput.id,
-    innerText: "Filter",
-    style: {
-        fontFamily: "inherit"
-    }
-})
+// var marketPriceLabel = span({
+//     innerHTML: "XBTUSD Market price:",
+//     style: {
+//         fontWeight: "bold"
+//     }
+// })
 
-filterInput.update({
-    onInput: () => {
-        const value = filterInput.value()
-        buttons_div.update({
-            children: breed_data.filter((e) => value == "" or e.name.lower().contains(value.lower())).map((e, i) => ({
-                type: "button",
-                id: i.string(),
-                className: "btn",
-                innerHTML: e.name,
-                style: {
-                    ...button_styles
-                },
-                onClick: () => {
-                    println(e)
-                    image.update({
-                        src: e.image and e.image.url or ""
-                    })
-                    image_div.update({
-                        style: {
-                            display: "block"
-                        }
-                    })
-                    image_div.children[1].update({
-                        innerHTML: e.name.upper()
-                    })
+// var marketPrice = span({
+//     style: {
+//         marginLeft: "10px"
+//     }
+// })
 
-                    scrollToTop()
-                }
-            }))
-        })
-    }
-})
+// var market_div = div({
+//     style: {
+//         marginTop: "20px",
+//         marginBottom: "20px"
+//     },
+//     children: [marketPriceLabel, marketPrice]
+// })
 
-var search_div = div({
-    children: [search_label, filterInput]
-})
+// const socket = wasm.Socket("wss://ws.bitmex.com/realtime")
+// socket.on_open(() => {
+//     println("Connected")
+//     // Subscribe
+//     const msg = json.serialize({
+//         op: "subscribe",
+//         args: ["instrument:XBTUSD"]
+//     })
+//     socket.send(msg)
+// })
+// socket.on_message((message) => {
+//     const res = json.parse(message)
+//     if (res.data and res.data[0] and res.data[0].markPrice) {
+//         const markPrice = res.data[0].markPrice
+//         println(markPrice)
+//         marketPrice.update({
+//             innerHTML: "$" + markPrice.string(),
+//             style: {
+//                 color: (markPrice >= prev_market_price and "green" or "red")
+//             }
+//         })
+//         prev_market_price_ref.value = prev_market_price
+//         prev_market_price = markPrice
+//     }
+// })
+// socket.on_error(() => {
+//     println(f"Error")
+// })
+// socket.on_close((e) => {
+//     println(f"Disconnecting: ", e)
+// })
 
-const onSuccess = (data) => {
-    loader.update({
-        style: {
-            display: "none"
-        }
-    })
-    var res = json.parse(data)
-    breed_data = res;
-    res[0].image and image.update({
-        src: res[0].image.url
-    })
-    res[0].image and url.update({
-        innerHTML: res[0].image.url,
-        href: res[0].image.url
-    })
-    image_div.children[1].update({
-        innerHTML: res[0].name.upper()
-    })
-    buttons_div.update({
-        children: res.map((e, i) => ({
-            type: "button",
-            id: i.string(),
-            className: "btn",
-            innerHTML: e.name,
-            style: {
-                ...button_styles
-            },
-            onClick: () => {
-                println(e)
-                image.update({
-                    src: e.image and e.image.url or ""
-                })
-                image_div.children[1].update({
-                    innerHTML: e.name.upper()
-                })
+// var buttons_div = div({
+//     style: {
+//         padding: "10px"
+//     }
+// })
 
-                scrollToTop()
-            }
-        }))
-    })
-}
+// var filterInput = input({
+//     name: "search",
+//     style: {
+//         margin: "10px"
+//     }
+// })
 
-const api_key = "live_zHbEWQ3nQu77w2E06tbkSKsVj49Gr5DMY6B8jobyZ5wyDnPO0vkfJ8t7A6nbPa0m"
-os.set_env("api_key", api_key)
+// createCSSClass("img", "
+//     transition: transform 0.3s ease-in-out;
+//     &:hover {
+//         transform: scale(1.2) translateX(30px) rotate(10deg) !important;
+//     }
+// ")
 
-var buttons_container = div({
-    children: [buttons_div]
-})
+// createCSSClass("btn", "
+//     transition: transform 0.3s ease-in-out;
+//     &:hover {
+//         background-color: #3E95FF !important;
+//     }
+// ")
 
-var structure = div({
-    children: [market_div, loader, image_div, search_div, buttons_container]
-})
+// const button_styles = {
+//     backgroundColor: "#3e68ff",
+//     color: "#fff",
+//     margin: "5px",
+//     fontSize: "18px",
+//     fontWeight: "bold",
+//     borderRadius: "15px",
+//     border: "none",
+//     boxSizing: "border-box",
+//     cursor: "pointer",
+//     fontFamily: "inherit",
+//     boxShadow: "0 3px 5px rgba(0, 0, 0, 0.18)",
+//     textAlign: "center",
+//     width: "200px",
+//     height: "60px"
+// }
 
-println("OPTIMISED")
+// var image = img({
+//     className: "img",
+//     style: {
+//         maxHeight: "400px",
+//         borderRadius: "10px",
+//     },
+//     transition: "transform 0.3s ease-in-out"
+// })
 
-fetch.get("https://api.thecatapi.com/v1/breeds", onSuccess, (data) => println("Failed"), {
-    "x-api-key": os.get_env("api_key")
-})  ÿØÿà JFIF      ÿþ ;CREATOR: gd-jpeg v1.0 (using IJG JPEG v80), quality = 75
+// const rb = button({
+//     innerHTML: "Rotate",
+//     style: {
+//         ...button_styles,
+//         backgroundColor: "green",
+//         height: "40px"
+//     },
+//     onClick: () => {
+//         const current_r = wasm.run_script_number(f"parseFloat(document.getElementById(`${image.id}`).style.transform.replace('rotate(', '').replace('deg)', '')) || 0;")
+//         image.update({
+//             style: {
+//                 transform: f"rotate(${180 + current_r}deg)"
+//             }
+//         })
+//     }
+// })
+
+// const url = reactive({
+//     type: "a",
+//     innerHTML: "",
+//     target: "_blank"
+// }, (data) => (data.src and {
+//     innerHTML: data.src,
+//     href: data.src
+// } or {}), image)
+
+// var image_div = div({
+//     children: [image, p({
+//         innerHTML: "",
+//         style: {
+//             fontFamily: "inherit",
+//             fontSize: "18px",
+//             fontWeight: "bold"
+//         }
+//     }), div({
+//             children: url, 
+//             style: {
+//                 marginBottom: "20px"
+//             }}), 
+//         rb]
+// })
+
+// const search_label = label({
+//     _for: filterInput.id,
+//     innerText: "Filter",
+//     style: {
+//         fontFamily: "inherit"
+//     }
+// })
+
+// filterInput.update({
+//     onInput: () => {
+//         const value = filterInput.value()
+//         buttons_div.update({
+//             children: breed_data.filter((e) => value == "" or e.name.lower().contains(value.lower())).map((e, i) => ({
+//                 type: "button",
+//                 id: i.string(),
+//                 className: "btn",
+//                 innerHTML: e.name,
+//                 style: {
+//                     ...button_styles
+//                 },
+//                 onClick: () => {
+//                     println(e)
+//                     image.update({
+//                         src: e.image and e.image.url or ""
+//                     })
+//                     image_div.update({
+//                         style: {
+//                             display: "block"
+//                         }
+//                     })
+//                     image_div.children[1].update({
+//                         innerHTML: e.name.upper()
+//                     })
+
+//                     scrollToTop()
+//                 }
+//             }))
+//         })
+//     }
+// })
+
+// var search_div = div({
+//     children: [search_label, filterInput]
+// })
+
+// const onSuccess = (data) => {
+//     loader.update({
+//         style: {
+//             display: "none"
+//         }
+//     })
+//     var res = json.parse(data)
+//     breed_data = res;
+//     res[0].image and image.update({
+//         src: res[0].image.url
+//     })
+//     res[0].image and url.update({
+//         innerHTML: res[0].image.url,
+//         href: res[0].image.url
+//     })
+//     image_div.children[1].update({
+//         innerHTML: res[0].name.upper()
+//     })
+//     buttons_div.update({
+//         children: res.map((e, i) => ({
+//             type: "button",
+//             id: i.string(),
+//             className: "btn",
+//             innerHTML: e.name,
+//             style: {
+//                 ...button_styles
+//             },
+//             onClick: () => {
+//                 println(e)
+//                 image.update({
+//                     src: e.image and e.image.url or ""
+//                 })
+//                 image_div.children[1].update({
+//                     innerHTML: e.name.upper()
+//                 })
+
+//                 scrollToTop()
+//             }
+//         }))
+//     })
+// }
+
+// const api_key = "live_zHbEWQ3nQu77w2E06tbkSKsVj49Gr5DMY6B8jobyZ5wyDnPO0vkfJ8t7A6nbPa0m"
+// os.set_env("api_key", api_key)
+
+// var buttons_container = div({
+//     children: [buttons_div]
+// })
+
+// var structure = div({
+//     children: [market_div, loader, image_div, search_div, buttons_container]
+// })
+
+// println("OPTIMISED")
+
+// fetch.get("https://api.thecatapi.com/v1/breeds", onSuccess, (data) => println("Failed"), {
+//     "x-api-key": os.get_env("api_key")
+// })  ÿØÿà JFIF      ÿþ ;CREATOR: gd-jpeg v1.0 (using IJG JPEG v80), quality = 75
 ÿÛ C 		
  $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ +V" ÿÄ           	
 ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	
@@ -1310,8 +1536,7 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
 ìÉ+
 Ê?*Ê—|“LÉ§ÌÉ©ŒÉŸÌÊ%£,ÉŠ¿³LË¯¬Ê¥ŒË*µlË÷ù/:Á,ÌÙi0þIÇŒÌ©I1áYÍLÊ˜)2ÂiÓLÍt	3¡yÙ¬ÍPé¼}‰ßÎÚ	Á~éÍ»ì\é6ÿ©åLÇ
 »tÚñË9}3pÏú,üÜÏpðÏ í=ÐlPÐ­Ðh°ÐmýÐdÑ=ë\ÑvpÑM½Ñþ¼ÈÍ Ò"]Å$]Ò|Ò}Ò*ÒûÛÒ°Å0½Ò<Ó€PÓ6ÓÅ›Ó‚°¼<=\ú3ÓŒP£B-	)ZÔ”PH½ÔLÝÔNýÔPÕR=ÕT]ÕV}ÕXÕZ½Õ\ÝÕ^ýÕ`Íd  ;<div>
-    <p style="background-color: aqua;"> {{ x }} </p>
-    <p style='color: red;'> {{ x }} </p>
-    <button onclick="{{ incr }}"> Increase </button>
-    <button onclick="{{ decr }}"> Decrease </button>
+    <p #var> {{ x }} </p>
+    <button #incrButton> Increase </button>
+    <button #decrButton> Decrease </button>
 </div>

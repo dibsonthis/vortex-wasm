@@ -17,21 +17,24 @@ import [
     button,
     img,
     p,
-    label
+    label,
+    parseHTML,
+    verifyHTML,
+    createElement,
+    parseContent,
+    text,
 ] : "components/whirlwind"
 
-import [chars, join, contains, lower, upper, replaceAll] : string
+import [chars, split, join, contains, lower, upper, replaceAll] : string
 import [forEach, map, filter] : functional
 import json
 import wasm
 import os
 import io
 
-var breed_data = {}
-var prev_market_price = 0
-var prev_market_price_ref = ref(0)
-
 var template = io.readf("template.html")
+
+const parent = createElement(template)
 
 var data = {
     x: 10,
@@ -40,298 +43,312 @@ var data = {
 const methods = {
     incr: () => {
         data.x += 1
+        parent.var.update({
+            innerHTML: data.x
+        })
         println(data.x)
     },
     decr: () => {
         data.x -= 1
+        parent.var.update({
+            innerHTML: data.x
+        })
         println(data.x)
     }
 }
 
-const closure = wasm.make_closure(methods.incr)
-const fn_str =  f"Module.ccall('vortex_eval','void',['number'],[${closure}])"
+// parent.var.update({
+//     innerHTML: data.x
+// })
 
-const closure2 = wasm.make_closure(methods.decr)
-const fn_str2 =  f"Module.ccall('vortex_eval','void',['number'],[${closure2}])"
+println(parseContent("<p #var> {{ x }} - {{ hello_world }} </p>"))
 
-var template_ = template.replaceAll("{{ incr }}", fn_str)
-template_ = template_.replaceAll("{{ decr }}", fn_str2)
-template_ = template_.replaceAll("{{ x }}", string(data.x))
-
-const d = div({
-    innerHTML: template_
-})
-
-data.x::onChange((e) => {
-    var template_ = template.replaceAll("{{ incr }}", fn_str)
-    template_ = template_.replaceAll("{{ decr }}", fn_str2)
-    template_ = template_.replaceAll("{{ x }}", string(data.x))
-
-    d.update({
-        innerHTML: template_
-    })
-})
-
-prev_market_price_ref.appendOnChange((e) => {
-    data.x = e.current
-})
-
-const loader = img({
-    src: "src/resources/loader.gif",
+parent.incrButton.update({
+    onClick: methods.incr,
     style: {
-        maxHeight: "100px",
-        borderRadius: "100px"
-    }
-})
-
-var marketPriceLabel = span({
-    innerHTML: "XBTUSD Market price:",
-    style: {
-        fontWeight: "bold"
-    }
-})
-
-var marketPrice = span({
-    style: {
-        marginLeft: "10px"
-    }
-})
-
-var market_div = div({
-    style: {
-        marginTop: "20px",
-        marginBottom: "20px"
-    },
-    children: [marketPriceLabel, marketPrice]
-})
-
-const socket = wasm.Socket("wss://ws.bitmex.com/realtime")
-socket.on_open(() => {
-    println("Connected")
-    // Subscribe
-    const msg = json.serialize({
-        op: "subscribe",
-        args: ["instrument:XBTUSD"]
-    })
-    socket.send(msg)
-})
-socket.on_message((message) => {
-    const res = json.parse(message)
-    if (res.data and res.data[0] and res.data[0].markPrice) {
-        const markPrice = res.data[0].markPrice
-        println(markPrice)
-        marketPrice.update({
-            innerHTML: "$" + markPrice.string(),
-            style: {
-                color: (markPrice >= prev_market_price and "green" or "red")
-            }
-        })
-        prev_market_price_ref.value = prev_market_price
-        prev_market_price = markPrice
-    }
-})
-socket.on_error(() => {
-    println(f"Error")
-})
-socket.on_close((e) => {
-    println(f"Disconnecting: ", e)
-})
-
-var buttons_div = div({
-    style: {
-        padding: "10px"
-    }
-})
-
-var filterInput = input({
-    name: "search",
-    style: {
-        margin: "10px"
-    }
-})
-
-createCSSClass("img", "
-    transition: transform 0.3s ease-in-out;
-    &:hover {
-        transform: scale(1.2) translateX(30px) rotate(10deg) !important;
-    }
-")
-
-createCSSClass("btn", "
-    transition: transform 0.3s ease-in-out;
-    &:hover {
-        background-color: #3E95FF !important;
-    }
-")
-
-const button_styles = {
-    backgroundColor: "#3e68ff",
-    color: "#fff",
-    margin: "5px",
-    fontSize: "18px",
-    fontWeight: "bold",
-    borderRadius: "15px",
-    border: "none",
-    boxSizing: "border-box",
-    cursor: "pointer",
-    fontFamily: "inherit",
-    boxShadow: "0 3px 5px rgba(0, 0, 0, 0.18)",
-    textAlign: "center",
-    width: "200px",
-    height: "60px"
-}
-
-var image = img({
-    className: "img",
-    style: {
-        maxHeight: "400px",
+        backgroundColor: "blue",
+        padding: "10px",
+        margin: "5px",
+        color: "white",
         borderRadius: "10px",
-    },
-    transition: "transform 0.3s ease-in-out"
+        border: "none",
+        fontSize: "18px"
+    }
 })
 
-const rb = button({
-    innerHTML: "Rotate",
+parent.decrButton.update({
+    onClick: methods.decr,
     style: {
-        ...button_styles,
-        backgroundColor: "green",
-        height: "40px"
-    },
-    onClick: () => {
-        const current_r = wasm.run_script_number(f"parseFloat(document.getElementById(`${image.id}`).style.transform.replace('rotate(', '').replace('deg)', '')) || 0;")
-        image.update({
-            style: {
-                transform: f"rotate(${180 + current_r}deg)"
-            }
-        })
+        backgroundColor: "red",
+        padding: "10px",
+        margin: "5px",
+        color: "white",
+        borderRadius: "10px",
+        border: "none",
+        fontSize: "18px"
     }
 })
 
-const url = reactive({
-    type: "a",
-    innerHTML: "",
-    target: "_blank"
-}, (data) => (data.src and {
-    innerHTML: data.src,
-    href: data.src
-} or {}), image)
+// var breed_data = {}
+// var prev_market_price = 0
+// var prev_market_price_ref = ref(0)
 
-var image_div = div({
-    children: [image, p({
-        innerHTML: "",
-        style: {
-            fontFamily: "inherit",
-            fontSize: "18px",
-            fontWeight: "bold"
-        }
-    }), div({
-            children: url, 
-            style: {
-                marginBottom: "20px"
-            }}), 
-        rb]
-})
+// const loader = img({
+//     src: "src/resources/loader.gif",
+//     style: {
+//         maxHeight: "100px",
+//         borderRadius: "100px"
+//     }
+// })
 
-const search_label = label({
-    _for: filterInput.id,
-    innerText: "Filter",
-    style: {
-        fontFamily: "inherit"
-    }
-})
+// var marketPriceLabel = span({
+//     innerHTML: "XBTUSD Market price:",
+//     style: {
+//         fontWeight: "bold"
+//     }
+// })
 
-filterInput.update({
-    onInput: () => {
-        const value = filterInput.value()
-        buttons_div.update({
-            children: breed_data.filter((e) => value == "" or e.name.lower().contains(value.lower())).map((e, i) => ({
-                type: "button",
-                id: i.string(),
-                className: "btn",
-                innerHTML: e.name,
-                style: {
-                    ...button_styles
-                },
-                onClick: () => {
-                    println(e)
-                    image.update({
-                        src: e.image and e.image.url or ""
-                    })
-                    image_div.update({
-                        style: {
-                            display: "block"
-                        }
-                    })
-                    image_div.children[1].update({
-                        innerHTML: e.name.upper()
-                    })
+// var marketPrice = span({
+//     style: {
+//         marginLeft: "10px"
+//     }
+// })
 
-                    scrollToTop()
-                }
-            }))
-        })
-    }
-})
+// var market_div = div({
+//     style: {
+//         marginTop: "20px",
+//         marginBottom: "20px"
+//     },
+//     children: [marketPriceLabel, marketPrice]
+// })
 
-var search_div = div({
-    children: [search_label, filterInput]
-})
+// const socket = wasm.Socket("wss://ws.bitmex.com/realtime")
+// socket.on_open(() => {
+//     println("Connected")
+//     // Subscribe
+//     const msg = json.serialize({
+//         op: "subscribe",
+//         args: ["instrument:XBTUSD"]
+//     })
+//     socket.send(msg)
+// })
+// socket.on_message((message) => {
+//     const res = json.parse(message)
+//     if (res.data and res.data[0] and res.data[0].markPrice) {
+//         const markPrice = res.data[0].markPrice
+//         println(markPrice)
+//         marketPrice.update({
+//             innerHTML: "$" + markPrice.string(),
+//             style: {
+//                 color: (markPrice >= prev_market_price and "green" or "red")
+//             }
+//         })
+//         prev_market_price_ref.value = prev_market_price
+//         prev_market_price = markPrice
+//     }
+// })
+// socket.on_error(() => {
+//     println(f"Error")
+// })
+// socket.on_close((e) => {
+//     println(f"Disconnecting: ", e)
+// })
 
-const onSuccess = (data) => {
-    loader.update({
-        style: {
-            display: "none"
-        }
-    })
-    var res = json.parse(data)
-    breed_data = res;
-    res[0].image and image.update({
-        src: res[0].image.url
-    })
-    res[0].image and url.update({
-        innerHTML: res[0].image.url,
-        href: res[0].image.url
-    })
-    image_div.children[1].update({
-        innerHTML: res[0].name.upper()
-    })
-    buttons_div.update({
-        children: res.map((e, i) => ({
-            type: "button",
-            id: i.string(),
-            className: "btn",
-            innerHTML: e.name,
-            style: {
-                ...button_styles
-            },
-            onClick: () => {
-                println(e)
-                image.update({
-                    src: e.image and e.image.url or ""
-                })
-                image_div.children[1].update({
-                    innerHTML: e.name.upper()
-                })
+// var buttons_div = div({
+//     style: {
+//         padding: "10px"
+//     }
+// })
 
-                scrollToTop()
-            }
-        }))
-    })
-}
+// var filterInput = input({
+//     name: "search",
+//     style: {
+//         margin: "10px"
+//     }
+// })
 
-const api_key = "live_zHbEWQ3nQu77w2E06tbkSKsVj49Gr5DMY6B8jobyZ5wyDnPO0vkfJ8t7A6nbPa0m"
-os.set_env("api_key", api_key)
+// createCSSClass("img", "
+//     transition: transform 0.3s ease-in-out;
+//     &:hover {
+//         transform: scale(1.2) translateX(30px) rotate(10deg) !important;
+//     }
+// ")
 
-var buttons_container = div({
-    children: [buttons_div]
-})
+// createCSSClass("btn", "
+//     transition: transform 0.3s ease-in-out;
+//     &:hover {
+//         background-color: #3E95FF !important;
+//     }
+// ")
 
-var structure = div({
-    children: [market_div, loader, image_div, search_div, buttons_container]
-})
+// const button_styles = {
+//     backgroundColor: "#3e68ff",
+//     color: "#fff",
+//     margin: "5px",
+//     fontSize: "18px",
+//     fontWeight: "bold",
+//     borderRadius: "15px",
+//     border: "none",
+//     boxSizing: "border-box",
+//     cursor: "pointer",
+//     fontFamily: "inherit",
+//     boxShadow: "0 3px 5px rgba(0, 0, 0, 0.18)",
+//     textAlign: "center",
+//     width: "200px",
+//     height: "60px"
+// }
 
-println("OPTIMISED")
+// var image = img({
+//     className: "img",
+//     style: {
+//         maxHeight: "400px",
+//         borderRadius: "10px",
+//     },
+//     transition: "transform 0.3s ease-in-out"
+// })
 
-fetch.get("https://api.thecatapi.com/v1/breeds", onSuccess, (data) => println("Failed"), {
-    "x-api-key": os.get_env("api_key")
-})  
+// const rb = button({
+//     innerHTML: "Rotate",
+//     style: {
+//         ...button_styles,
+//         backgroundColor: "green",
+//         height: "40px"
+//     },
+//     onClick: () => {
+//         const current_r = wasm.run_script_number(f"parseFloat(document.getElementById(`${image.id}`).style.transform.replace('rotate(', '').replace('deg)', '')) || 0;")
+//         image.update({
+//             style: {
+//                 transform: f"rotate(${180 + current_r}deg)"
+//             }
+//         })
+//     }
+// })
+
+// const url = reactive({
+//     type: "a",
+//     innerHTML: "",
+//     target: "_blank"
+// }, (data) => (data.src and {
+//     innerHTML: data.src,
+//     href: data.src
+// } or {}), image)
+
+// var image_div = div({
+//     children: [image, p({
+//         innerHTML: "",
+//         style: {
+//             fontFamily: "inherit",
+//             fontSize: "18px",
+//             fontWeight: "bold"
+//         }
+//     }), div({
+//             children: url, 
+//             style: {
+//                 marginBottom: "20px"
+//             }}), 
+//         rb]
+// })
+
+// const search_label = label({
+//     _for: filterInput.id,
+//     innerText: "Filter",
+//     style: {
+//         fontFamily: "inherit"
+//     }
+// })
+
+// filterInput.update({
+//     onInput: () => {
+//         const value = filterInput.value()
+//         buttons_div.update({
+//             children: breed_data.filter((e) => value == "" or e.name.lower().contains(value.lower())).map((e, i) => ({
+//                 type: "button",
+//                 id: i.string(),
+//                 className: "btn",
+//                 innerHTML: e.name,
+//                 style: {
+//                     ...button_styles
+//                 },
+//                 onClick: () => {
+//                     println(e)
+//                     image.update({
+//                         src: e.image and e.image.url or ""
+//                     })
+//                     image_div.update({
+//                         style: {
+//                             display: "block"
+//                         }
+//                     })
+//                     image_div.children[1].update({
+//                         innerHTML: e.name.upper()
+//                     })
+
+//                     scrollToTop()
+//                 }
+//             }))
+//         })
+//     }
+// })
+
+// var search_div = div({
+//     children: [search_label, filterInput]
+// })
+
+// const onSuccess = (data) => {
+//     loader.update({
+//         style: {
+//             display: "none"
+//         }
+//     })
+//     var res = json.parse(data)
+//     breed_data = res;
+//     res[0].image and image.update({
+//         src: res[0].image.url
+//     })
+//     res[0].image and url.update({
+//         innerHTML: res[0].image.url,
+//         href: res[0].image.url
+//     })
+//     image_div.children[1].update({
+//         innerHTML: res[0].name.upper()
+//     })
+//     buttons_div.update({
+//         children: res.map((e, i) => ({
+//             type: "button",
+//             id: i.string(),
+//             className: "btn",
+//             innerHTML: e.name,
+//             style: {
+//                 ...button_styles
+//             },
+//             onClick: () => {
+//                 println(e)
+//                 image.update({
+//                     src: e.image and e.image.url or ""
+//                 })
+//                 image_div.children[1].update({
+//                     innerHTML: e.name.upper()
+//                 })
+
+//                 scrollToTop()
+//             }
+//         }))
+//     })
+// }
+
+// const api_key = "live_zHbEWQ3nQu77w2E06tbkSKsVj49Gr5DMY6B8jobyZ5wyDnPO0vkfJ8t7A6nbPa0m"
+// os.set_env("api_key", api_key)
+
+// var buttons_container = div({
+//     children: [buttons_div]
+// })
+
+// var structure = div({
+//     children: [market_div, loader, image_div, search_div, buttons_container]
+// })
+
+// println("OPTIMISED")
+
+// fetch.get("https://api.thecatapi.com/v1/breeds", onSuccess, (data) => println("Failed"), {
+//     "x-api-key": os.get_env("api_key")
+// })  
