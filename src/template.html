@@ -21,8 +21,8 @@
         #loader 
         src: "src/resources/cat.jpg" 
         $width: 100px 
-        $height: 100px 
-        $display: block 
+        $height: 100px
+        $position: relative
     />
     <label $fontSize: 20px>Name:</label>
     <input 
@@ -31,7 +31,13 @@
         $margin: 5px
     />
     <ul>
-    <li %for: "nums, num, i">
+    <li 
+        %if: show 
+        @click:incr
+        %for: "nums, num" 
+        $cursor: pointer
+        $listStyleType: none
+    >
         {{ num }} - {{ name }}
     </li>
     </ul>

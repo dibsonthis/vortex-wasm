@@ -51,7 +51,6 @@ const methods = {
         data.nums = [...data.nums, 10]
     },
     changeName: () => {
-        data.show = !data.show
         if (data.name == "John") {
             data.name = "Allan"
         } else {
@@ -62,11 +61,7 @@ const methods = {
         data.name = parent.nameInput.value()
     },
     toggleLoader: (parent) => {
-        parent.loader.update({
-            style: {
-                display: parent.loader.attribute("style.display") == "block" and "none" or "block"
-            }
-        })
+        data.show = !data.show
     }
 }
 

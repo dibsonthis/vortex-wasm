@@ -132,6 +132,9 @@ type element = (config = {}, parent = None) => {
                     continue;
                 }
                 if (key == "onClick") {
+                    if (!data[key]) {
+                        continue
+                    }
                     if (this.onClick) {
                         wasm.delete_closure(this.onClick)
                     }
@@ -142,6 +145,9 @@ type element = (config = {}, parent = None) => {
                     continue;
                 }
                 if (key == "onInput") {
+                    if (!data[key]) {
+                        continue
+                    }
                     if (this.onInput) {
                         wasm.delete_closure(this.onInput)
                     }
@@ -152,6 +158,9 @@ type element = (config = {}, parent = None) => {
                     continue;
                 }
                 if (key == "onChange") {
+                    if (!data[key]) {
+                        continue
+                    }
                     if (this.onChange) {
                         wasm.delete_closure(this.onChange)
                     }
@@ -162,6 +171,9 @@ type element = (config = {}, parent = None) => {
                     continue;
                 }
                 if (key == "onBlur") {
+                    if (!data[key]) {
+                        continue
+                    }
                     if (this.onBlur) {
                         wasm.delete_closure(this.onBlur)
                     }
@@ -926,6 +938,10 @@ const createElement = (html, data = {}, methods = {}) => {
                     e.update({
                         onBlur: injected_method
                     })
+                } else if (key == "change") {
+                    e.update({
+                        onChange: injected_method
+                    })
                 }
             })
 
@@ -976,6 +992,7 @@ const createElement = (html, data = {}, methods = {}) => {
                     }
                 }
                 if (key == "for") {
+
                     var value = props.inner[key]
                     if (value.trim() == "") {
                         error("Malformed for loop")
@@ -983,6 +1000,9 @@ const createElement = (html, data = {}, methods = {}) => {
                     var values = value.split(",")
                     var list = values[0].trim()
                     var current_parent = stack[stack.length() - 1]
+
+                    const container = element({})
+                    wasm.run_script(f"document.getElementById('${current_parent.id}').appendChild(document.getElementById('${container.id}'))")
 
                     if (values.length() == 1) {
                         for (data[list], i, v) {
@@ -999,6 +1019,9 @@ const createElement = (html, data = {}, methods = {}) => {
                                     innerText: content.content
                                 })
                                 e._data = temp_data
+
+                                wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+
                                 continue
                             }
 
@@ -1015,7 +1038,11 @@ const createElement = (html, data = {}, methods = {}) => {
                                 const clonedElement = originalElement.cloneNode(true);
                                 clonedElement.id = '${new_id}';
                                 clonedElement.innerText = '${content.content}';
-                                document.getElementById('${current_parent.id}').appendChild(clonedElement)
+                                clonedElement.onclick = originalElement.onclick;
+                                clonedElement.oninput = originalElement.oninput;
+                                clonedElement.onchange = originalElement.onchange;
+                                clonedElement.onblur = originalElement.onblur;
+                                document.getElementById('${container.id}').appendChild(clonedElement)
                             "
 
                             wasm.run_script(script)
@@ -1071,6 +1098,7 @@ const createElement = (html, data = {}, methods = {}) => {
                                     innerText: content.content
                                 })
                                 e._data = temp_data
+                                wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
                                 continue
                             }
 
@@ -1087,7 +1115,11 @@ const createElement = (html, data = {}, methods = {}) => {
                                 const clonedElement = originalElement.cloneNode(true);
                                 clonedElement.id = '${new_id}';
                                 clonedElement.innerText = '${content.content}';
-                                document.getElementById('${current_parent.id}').appendChild(clonedElement)
+                                clonedElement.onclick = originalElement.onclick;
+                                clonedElement.oninput = originalElement.oninput;
+                                clonedElement.onchange = originalElement.onchange;
+                                clonedElement.onblur = originalElement.onblur;
+                                document.getElementById('${container.id}').appendChild(clonedElement)
                             "
 
                             wasm.run_script(script)
@@ -1147,6 +1179,7 @@ const createElement = (html, data = {}, methods = {}) => {
                                     innerText: content.content
                                 })
                                 e._data = temp_data
+                                wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
                                 continue
                             }
 
@@ -1163,7 +1196,11 @@ const createElement = (html, data = {}, methods = {}) => {
                                 const clonedElement = originalElement.cloneNode(true);
                                 clonedElement.id = '${new_id}';
                                 clonedElement.innerText = '${content.content}';
-                                document.getElementById('${current_parent.id}').appendChild(clonedElement)
+                                clonedElement.onclick = originalElement.onclick;
+                                clonedElement.oninput = originalElement.oninput;
+                                clonedElement.onchange = originalElement.onchange;
+                                clonedElement.onblur = originalElement.onblur;
+                                document.getElementById('${container.id}').appendChild(clonedElement)
                             "
 
                             wasm.run_script(script)
