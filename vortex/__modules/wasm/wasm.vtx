@@ -1,0 +1,68 @@
+const lib = load_lib("./bin/wasm.wasm", [
+    "run_script", 
+    "run_script_number", 
+    "run_script_string",
+    "get_ptr",
+    "make_closure",
+    "delete_closure",
+    "set_main_loop",
+    "fetch_get",
+    "socket_connect",
+    "socket_on_open",
+    "socket_on_error",
+    "socket_on_close",
+    "socket_on_message",
+    "socket_send",
+    "socket_close",
+    "socket_get_state"
+])
+
+const run_script = (script) => lib.run_script(script)
+const run_script_number = (script) => lib.run_script_number(script)
+const run_script_string = (script) => lib.run_script_string(script)
+const get_ptr = (value) => lib.get_ptr(value)
+const make_closure = (value) => lib.make_closure(value, __vm__)
+const delete_closure = (ptr_num) => lib.delete_closure(ptr_num, __vm__)
+const set_main_loop = (func, loop = true) => lib.set_main_loop(func, loop)
+const fetch_get = (url, onSuccess = (data) => {}, onFailure = (data) => {}, headers = {}) => lib.fetch_get(url, onSuccess, onFailure, headers)
+const socket_connect = (url) => lib.socket_connect(url)
+const socket_on_open = (ws, func) => lib.socket_on_open(ws, func)
+const socket_on_close = (ws, func) => lib.socket_on_close(ws, func)
+const socket_on_error = (ws, func) => lib.socket_on_error(ws, func)
+const socket_on_message = (ws, func) => lib.socket_on_message(ws, func)
+const socket_send = (ws, message) => lib.socket_send(ws, message)
+const socket_close = (ws, code, reason) => lib.socket_close(ws, code, reason)
+const socket_get_state = (ws) => lib.socket_get_state(ws)
+
+type Socket = (url) => {
+    return {
+        socket: socket_connect(url),
+        on_open: (func) => {
+            socket_on_open(this.socket, func)
+            return this
+        },
+        on_close: (func) => {
+            socket_on_close(this.socket, func)
+            return this
+        },
+        on_error: (func) => {
+            socket_on_error(this.socket, func)
+            return this
+        },
+        on_message: (func) => {
+            socket_on_message(this.socket, func)
+            return this
+        },
+        send: (message) => {
+            socket_send(this.socket, message)
+            return this
+        },
+        close: (code = 1000, reason = "no reason") => {
+            socket_close(this.socket, code, reason)
+            return this
+        },
+        state: () => {
+            return socket_get_state(this.socket)
+        }
+    }
+}

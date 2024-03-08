@@ -7,6 +7,70 @@
 #include "Bytecode/Generator.hpp"
 #include "VirtualMachine/VirtualMachine.hpp"
 
+extern "C" void vortex_eval(uintptr_t func_ptr)
+{
+    auto func = reinterpret_cast<Value *>(func_ptr);
+    VM func_vm;
+    std::shared_ptr<FunctionObj> main = std::make_shared<FunctionObj>();
+    main->name = "";
+    main->arity = 0;
+    main->chunk = Chunk();
+    CallFrame main_frame;
+    main_frame.function = main;
+    main_frame.sp = 0;
+    main_frame.ip = main->chunk.code.data();
+    main_frame.frame_start = 0;
+    func_vm.frames.push_back(main_frame);
+
+    add_constant(main->chunk, *func);
+    add_opcode(main->chunk, OP_LOAD_CONST, 0, 0);
+    add_opcode(main->chunk, OP_CALL, 0, 0);
+
+    add_code(main->chunk, OP_EXIT, 0);
+
+    auto offsets = instruction_offsets(main_frame.function->chunk);
+    main_frame.function->instruction_offsets = offsets;
+
+    evaluate(func_vm);
+}
+
+// extern "C" void vortex_eval(const char *code)
+// {
+//     Lexer lexer(code, false);
+//     lexer.tokenize();
+
+//     auto parent_path = std::filesystem::path().parent_path();
+//     if (parent_path != "")
+//     {
+//         std::filesystem::current_path(parent_path);
+//     }
+
+//     Parser parser(lexer.nodes, "eval");
+//     parser.parse(0, "_");
+//     parser.remove_op_node(";");
+//     auto ast = parser.nodes;
+
+//     VM vm;
+//     std::shared_ptr<FunctionObj> main = std::make_shared<FunctionObj>();
+//     main->name = "";
+//     main->arity = 0;
+//     main->chunk = Chunk();
+//     main->chunk.import_path = "eval";
+//     CallFrame main_frame;
+//     main_frame.name = "eval";
+//     main_frame.function = main;
+//     main_frame.sp = 0;
+//     main_frame.ip = main->chunk.code.data();
+//     main_frame.frame_start = 0;
+
+//     generate_bytecode(parser.nodes, main_frame.function->chunk, "eval");
+//     auto offsets = instruction_offsets(main_frame.function->chunk);
+//     main_frame.function->instruction_offsets = offsets;
+//     vm.frames.push_back(main_frame);
+//     add_code(main_frame.function->chunk, OP_EXIT);
+//     evaluate(vm);
+// }
+
 enum CompType
 {
     DEV,
@@ -59,6 +123,7 @@ int main(int argc, char **argv)
 
     if (type == CompType::INTERP)
     {
+
         if (argc == 1)
         {
             std::cout << "You must enter a source path e.g: vortex \"dev/main.vtx\"\n";
@@ -72,13 +137,13 @@ int main(int argc, char **argv)
 
         // std::string path = "main.vtx";
 
-        // Create and open a text file
+        // /*Create and open a text file*/
         // std::ofstream mainFile(path);
 
-        // Write to the file
+        // /*Write to the file*/
         // mainFile << code;
 
-        // Close the file
+        // /*Close the file*/
         // mainFile.close();
 
         if (argc > 1)

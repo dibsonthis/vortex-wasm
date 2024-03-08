@@ -24,7 +24,9 @@
         $height: 100px
         $position: relative
     />
-    <label $fontSize: 20px>Name:</label>
+    <label $fontSize: 20px>
+        <span>Name:</span>
+    </label>
     <input 
         #nameInput
         @input: updateName
@@ -72,6 +74,6 @@
         $backgroundColor: gray
         className: btn
     > 
-        Toggle 
+        Hide 
     </button>
 </div>

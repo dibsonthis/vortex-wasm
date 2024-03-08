@@ -242,6 +242,7 @@ static EvaluateResult run(VM &vm)
     define_global(vm, "__vm__", vm_ptr);
 
     // Define native functions
+    define_native(vm, "eval", eval_builtin);
     define_native(vm, "print", print_builtin);
     define_native(vm, "println", println_builtin);
     define_native(vm, "clock", clock_builtin);
@@ -915,24 +916,6 @@ static EvaluateResult run(VM &vm)
             closure_obj->instruction_offsets = function->instruction_offsets;
             closure_obj->closed_vars = std::vector<std::shared_ptr<Closure>>();
 
-            // auto compare_closures = [](const std::shared_ptr<Closure> &cl1, const std::shared_ptr<Closure> &cl2)
-            // {
-            //     return cl1->initial_location == cl2->initial_location;
-            // };
-
-            // auto pred = [](const std::shared_ptr<Closure> &cl1, const std::shared_ptr<Closure> &cl2)
-            // {
-            //     return cl1->initial_location < cl2->initial_location;
-            // };
-
-            // std::sort(vm.closed_values.begin(), vm.closed_values.end(), pred);
-
-            // auto new_vec = std::unique(vm.closed_values.begin(), vm.closed_values.end(), compare_closures);
-
-            // std::cout << vm.closed_values.size() << std::endl;
-
-            // vm.closed_values.erase(new_vec, vm.closed_values.end());
-
             for (auto &var : closure_obj->closed_var_indexes)
             {
                 int index = var.index;
@@ -989,7 +972,6 @@ static EvaluateResult run(VM &vm)
                             vm.closed_values.push_back(hoisted);
                         }
                         closure_obj->closed_vars.push_back(hoisted);
-                        // vm.closed_values.push_back(hoisted);
                     }
                 }
             }
@@ -1131,6 +1113,7 @@ static EvaluateResult run(VM &vm)
                 break;
             }
             *frame->function->closed_vars[index]->location = vm.stack.back();
+            frame->function->closed_vars[index]->location->meta.is_const = false;
             break;
         }
         case OP_JUMP_IF_FALSE:
@@ -2996,6 +2979,72 @@ static int call_function(VM &vm, Value &function, int param_num, CallFrame *&fra
     return 0;
 }
 
+static Value eval_builtin(std::vector<Value> &args)
+{
+    if (args.size() != 2)
+    {
+        return error_object("Function 'eval' expects 2 arguments");
+    }
+
+    Value source = args[0];
+    Value context = args[1];
+
+    if (!source.is_string())
+    {
+        return error_object("Function 'eval' expects arg 'source' to be a string");
+    }
+
+    if (!context.is_object())
+    {
+        return error_object("Function 'eval' expects arg 'context' to be an object");
+    }
+
+    Lexer lexer(source.get_string(), false);
+    lexer.tokenize();
+
+    Parser parser(lexer.nodes, lexer.file_name);
+    parser.parse(0, "_");
+    parser.remove_op_node(";");
+    auto ast = parser.nodes;
+
+    VM vm;
+    std::shared_ptr<FunctionObj> main = std::make_shared<FunctionObj>();
+    main->name = "";
+    main->arity = 0;
+    main->chunk = Chunk();
+    CallFrame main_frame;
+    main_frame.name = "_eval";
+    main_frame.function = main;
+    main_frame.sp = 0;
+    main_frame.ip = main->chunk.code.data();
+    main_frame.frame_start = 0;
+
+    auto context_obj = context.get_object();
+
+    for (auto key : context_obj->keys)
+    {
+        vm.globals[key] = context_obj->values[key];
+    }
+
+    generate_bytecode(parser.nodes, main_frame.function->chunk, "_eval", true);
+    auto offsets = instruction_offsets(main_frame.function->chunk);
+    if (main_frame.function->chunk.code.back() == OP_POP)
+    {
+        main_frame.function->chunk.code.pop_back();
+    }
+    main_frame.function->instruction_offsets = offsets;
+    vm.frames.push_back(main_frame);
+    add_code(main_frame.function->chunk, OP_EXIT);
+    evaluate(vm);
+
+    if (vm.stack.size() > 0)
+    {
+        return vm.stack.back();
+    }
+
+    return none_val();
+}
+
 static Value print_builtin(std::vector<Value> &args)
 {
     for (Value &arg : args)
@@ -3549,7 +3598,7 @@ static Value info_builtin(std::vector<Value> &args)
     }
     case Object:
     {
-        obj->keys = {"type", "typename", "keys", "values"};
+        obj->keys = {"type", "typename", "keys", "values", "onChangeHook", "onAccessHook"};
         auto &object = value.get_object();
         obj->values["type"] = object->type == nullptr ? none_val() : string_val(object->type->name);
         obj->values["typename"] = string_val(object->type_name);
@@ -3563,10 +3612,15 @@ static Value info_builtin(std::vector<Value> &args)
         {
             obj->values["values"].get_list()->push_back(object->values[key]);
         }
+        obj->values["onChangeHook"] = value.hooks.onChangeHook ? *value.hooks.onChangeHook : none_val();
+        obj->values["onAccessHook"] = value.hooks.onAccessHook ? *value.hooks.onAccessHook : none_val();
         return info;
     }
     default:
     {
+        obj->keys = {"onChangeHook", "onAccessHook"};
+        obj->values["onChangeHook"] = value.hooks.onChangeHook ? *value.hooks.onChangeHook : none_val();
+        obj->values["onAccessHook"] = value.hooks.onAccessHook ? *value.hooks.onAccessHook : none_val();
         return info;
     }
     }

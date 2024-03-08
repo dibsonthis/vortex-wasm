@@ -54,6 +54,7 @@ struct VM
     std::vector<CallFrame> frames;
     std::unordered_map<std::string, std::shared_ptr<CallFrame>> gen_frames;
     std::vector<Value *> objects;
+    std::unordered_map<uintptr_t, std::pair<Value *, Value *>> hoisted;
     std::unordered_map<std::string, Value> globals;
     int status = 0;
     std::vector<std::shared_ptr<Closure>> closed_values;
@@ -94,6 +95,7 @@ bool is_falsey(Value &value);
 Value copy(Value &value);
 Value error_object(std::string message, std::string error_type = "GenericError");
 
+static Value eval_builtin(std::vector<Value> &args);
 static Value print_builtin(std::vector<Value> &args);
 static Value println_builtin(std::vector<Value> &args);
 static Value clock_builtin(std::vector<Value> &args);

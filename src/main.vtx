@@ -61,6 +61,9 @@ const methods = {
         data.name = parent.nameInput.value()
     },
     toggleLoader: (parent) => {
+        parent.toggleLoader.update({
+            innerText: parent.toggleLoader.attribute("innerText") == "Show" and "Hide" or "Show"
+        })
         data.show = !data.show
     }
 }

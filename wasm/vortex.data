@@ -1323,9 +1323,16 @@ const methods = {
         data.name = parent.nameInput.value()
     },
     toggleLoader: (parent) => {
+        parent.toggleLoader.update({
+            innerText: parent.toggleLoader.attribute("innerText") == "Show" and "Hide" or "Show"
+        })
         data.show = !data.show
     }
 }
+
+element({
+    innerHTML: eval("100 * x", {x: 2.3})
+})
 
 const parent = createElement(template, data, methods)
 
@@ -2188,7 +2195,9 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
         $height: 100px
         $position: relative
     />
-    <label $fontSize: 20px>Name:</label>
+    <label $fontSize: 20px>
+        <span>Name:</span>
+    </label>
     <input 
         #nameInput
         @input: updateName
@@ -2236,6 +2245,6 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
         $backgroundColor: gray
         className: btn
     > 
-        Toggle 
+        Hide 
     </button>
 </div>
