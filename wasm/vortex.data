@@ -2,7 +2,77 @@ import wasm
 import math
 import random
 import [forEach] : functional
-import [substring, trim, split, replaceAll, contains] : string
+import [substring, trim, split, replaceAll, contains, startsWith] : string
+
+const get_property = (obj, prop) => {
+    var _prop = prop.split(".")
+    if (_prop.length() == 1) {
+        return obj[_prop[0]]
+    }
+
+    var value = obj;
+
+    for (_prop, index, p) {
+        p = p.trim()
+        if ("0123456789".contains(p)) {
+            p = number(p)
+        }
+        value = value[p]
+    }
+
+    return value
+}
+
+const set_prop_hook = (obj, prop, hook) => {
+    var _prop = prop.split(".")
+    if (_prop.length() == 1) {
+        const currentOnChange = obj[_prop[0]].info().onChangeHook
+        if (currentOnChange) {
+            return obj[_prop[0]]::onChange((e) => {
+                currentOnChange(e)
+                hook(e)
+            })
+        }
+        return obj[_prop[0]]::onChange((e) => hook(e))
+    }
+
+    var value = obj;
+    var container = obj
+
+    for (_prop, index, p) {
+        p = p.trim()
+        if ("0123456789".contains(p)) {
+            p = number(p)
+        }
+        if (index == 0) {
+            const currentOnChange = container[p].info().onChangeHook
+            if (currentOnChange) {
+                container[p]::onChange((e) => {
+                    currentOnChange(e)
+                    hook(e)
+                })
+            } else {
+                container[p]::onChange((e) => hook(e))
+            }
+        }
+        if (index < _prop.length() - 1) {
+            container = value[p]
+        }
+
+        value = value[p]
+    }
+
+    const currentOnChange = container[_prop[_prop.length()-1]].info().onChangeHook
+
+    if (currentOnChange) {
+        return container[_prop[_prop.length()-1]]::onChange((e) => {
+            currentOnChange(e)
+            hook(e)
+        })
+    }
+
+    return container[_prop[_prop.length()-1]]::onChange((e) => hook(e))
+}
 
 type element = (config = {}, parent = None) => {
     config.type or (config.type = "div")
@@ -788,12 +858,27 @@ const extractProperties = (elem) => {
     }
 }
 
+const with_hook = (data, hook, name = "data") => {
+    if (data.type() != "Object") {
+        return data::onAccess((e) => hook(e), name)
+    }
+
+    var _data = {}
+
+    for (data.info().keys, index, key) {
+        _data[key] = with_hook(data[key], hook, name + "." + key)
+    }
+
+    return _data::onAccess((e) => hook(e), name)
+}
+
 const parseContent = (content, data = {}) => {
     var index = 0
     var variables = []
     var substrings = []
     var new_content = content;
     var diff = 0
+
     while (content[index]) {
         if (content[index] == "{" and content[index + 1] == "{") {
             var start_index = index
@@ -813,20 +898,21 @@ const parseContent = (content, data = {}) => {
                 index += 1
             }
 
-            variable = variable.trim().split(" ");
-            if (variable.length() != 1) {
-                error("Template variables must contain one value")
-            }
-            variable = variable[0]
+            // variable = variable.trim().split(" ");
+            // if (variable.length() != 1) {
+            //     error("Template variables must contain one value")
+            // }
+            // variable = variable[0]
             const substr = new_content.substring(start_index, end_index - start_index)
             substrings.append(substr)
-            variables.append(variable)
+            variables.append(variable.trim())
         }
         index += 1
     }
 
     variables.forEach((var, i) => {
-        new_content = new_content.replaceAll(substrings[i], string(data[var]))
+        // new_content = new_content.replaceAll(substrings[i], string(data[var]))
+        new_content = new_content.replaceAll(substrings[i], string(eval(var, data)))
     })
 
     return {
@@ -843,7 +929,9 @@ const createElement = (html, data = {}, methods = {}) => {
     var parent;
     var parent_exists = false;
 
-    tags.forEach((tag) => {
+    var deps = {}
+
+    tags.forEach((tag, i) => {
         const props = tag.extractProperties();
         const id = props.id;
         var dependencies = []
@@ -853,9 +941,24 @@ const createElement = (html, data = {}, methods = {}) => {
             }
         
             if (tag.content) {
+                const data = with_hook(data, (e) => {
+                    var name = e.name
+                    if (name.startsWith("data.")) {
+                        name = name.replaceAll("data.", "")
+                    }
+                    if (deps[string(i)]) {
+                        deps[string(i)].append(name)
+                    } else {
+                        deps[string(i)] = [name]
+                    }
+                })
+
                 const parsed_content = tag.content.parseContent(data)
                 config.innerHTML = parsed_content.content
-                dependencies = parsed_content.variables
+                // dependencies = parsed_content.variables
+                dependencies = deps[string(i)] and deps[string(i)] or []
+            } else {
+                // data = with_hook(data, (e) => {})
             }
 
             var e = element(config)
@@ -883,29 +986,39 @@ const createElement = (html, data = {}, methods = {}) => {
             var _data = data
 
             dependencies.forEach((var) => {
-                const currentOnChange = data[var].info().onChangeHook
-                if (currentOnChange) {
-                    data[var]::onChange((_e) => {
-                        currentOnChange(_e)
-                        if (e._data) {
-                            _data = {...e._data, ...data}
-                        }
-                        const parsed_content = tag.content.parseContent(_data)
-                        e.update({
-                            innerHTML: parsed_content.content
-                        })
+                // const v = get_property(data, var)
+                set_prop_hook(data, var, (_e) => {
+                    if (e._data) {
+                        _data = {...e._data, ...data}
+                    }
+                    const parsed_content = tag.content.parseContent(_data)
+                    e.update({
+                        innerHTML: parsed_content.content
                     })
-                } else {
-                    data[var]::onChange((_e) => {
-                        if (e._data) {
-                            _data = {...e._data, ...data}
-                        }
-                        const parsed_content = tag.content.parseContent(_data)
-                        e.update({
-                            innerHTML: parsed_content.content
-                        })
-                    })
-                }
+                })
+                // const currentOnChange = data[var].info().onChangeHook
+                // if (currentOnChange) {
+                //     data[var]::onChange((_e) => {
+                //         currentOnChange(_e)
+                //         if (e._data) {
+                //             _data = {...e._data, ...data}
+                //         }
+                //         const parsed_content = tag.content.parseContent(_data)
+                //         e.update({
+                //             innerHTML: parsed_content.content
+                //         })
+                //     })
+                // } else {
+                //     data[var]::onChange((_e) => {
+                //         if (e._data) {
+                //             _data = {...e._data, ...data}
+                //         }
+                //         const parsed_content = tag.content.parseContent(_data)
+                //         e.update({
+                //             innerHTML: parsed_content.content
+                //         })
+                //     })
+                // }
             })
 
             // If we have styles, we apply them here
@@ -1259,6 +1372,8 @@ const createElement = (html, data = {}, methods = {}) => {
         }
     })
 
+    // deps.info().keys.forEach((k) => println(k, ": ", deps[k]))
+
     return parent
 }import [
     ref,
@@ -1301,7 +1416,10 @@ var data = {
     age: 45,
     name: "John",
     show: true,
-    nums: [1, 2, 3, 4, 5]
+    nums: [1, 2, 3, 4, 5],
+    address: {
+        street: "123 Baker st."
+    }
 }
 
 const methods = {
@@ -1310,7 +1428,6 @@ const methods = {
     },
     decr: () => {
         data.age -= 1
-        data.nums = [...data.nums, 10]
     },
     changeName: () => {
         if (data.name == "John") {
@@ -1327,14 +1444,17 @@ const methods = {
             innerText: parent.toggleLoader.attribute("innerText") == "Show" and "Hide" or "Show"
         })
         data.show = !data.show
-    }
+    },
+    changeAddress: () => {
+        data.address = {
+            street: "455 Bloop St."
+        }
+    },
 }
 
-element({
-    innerHTML: eval("100 * x", {x: 2.3})
-})
-
 const parent = createElement(template, data, methods)
+
+println("Done")
 
 // var breed_data = {}
 // var prev_market_price = 0
@@ -2203,25 +2323,14 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
         @input: updateName
         $margin: 5px
     />
-    <ul>
-    <li 
-        %if: show 
-        @click:incr
-        %for: "nums, num" 
-        $cursor: pointer
-        $listStyleType: none
-    >
-        {{ num }} - {{ name }}
-    </li>
-    </ul>
-    <p $fontWeight: bold> Hi, my name is {{ name }}, my age is {{ age }} </p>
+    <p $fontWeight: bold> Hi, my name is {{ "_" + name + "_" }}, my age is {{ age + 2 }} - I live at {{ address.street }} </p>
     <button 
         #incrButton 
         @click: incr
         $backgroundColor: green
         className: btn
     > 
-        Increase 
+        Increase
     </button>
     <button 
         #decrButton 
@@ -2246,5 +2355,13 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
         className: btn
     > 
         Hide 
+    </button>
+    <button 
+        #changeAddress
+        @click: changeAddress
+        $backgroundColor: yellow
+        className: btn
+    > 
+        Change addy 
     </button>
 </div>

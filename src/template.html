@@ -32,25 +32,14 @@
         @input: updateName
         $margin: 5px
     />
-    <ul>
-    <li 
-        %if: show 
-        @click:incr
-        %for: "nums, num" 
-        $cursor: pointer
-        $listStyleType: none
-    >
-        {{ num }} - {{ name }}
-    </li>
-    </ul>
-    <p $fontWeight: bold> Hi, my name is {{ name }}, my age is {{ age }} </p>
+    <p $fontWeight: bold> Hi, my name is {{ "_" + name + "_" }}, my age is {{ age + 2 }} - I live at {{ address.street }} </p>
     <button 
         #incrButton 
         @click: incr
         $backgroundColor: green
         className: btn
     > 
-        Increase 
+        Increase
     </button>
     <button 
         #decrButton 
@@ -75,5 +64,13 @@
         className: btn
     > 
         Hide 
+    </button>
+    <button 
+        #changeAddress
+        @click: changeAddress
+        $backgroundColor: yellow
+        className: btn
+    > 
+        Change addy 
     </button>
 </div>

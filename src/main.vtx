@@ -39,7 +39,10 @@ var data = {
     age: 45,
     name: "John",
     show: true,
-    nums: [1, 2, 3, 4, 5]
+    nums: [1, 2, 3, 4, 5],
+    address: {
+        street: "123 Baker st."
+    }
 }
 
 const methods = {
@@ -48,7 +51,6 @@ const methods = {
     },
     decr: () => {
         data.age -= 1
-        data.nums = [...data.nums, 10]
     },
     changeName: () => {
         if (data.name == "John") {
@@ -65,10 +67,17 @@ const methods = {
             innerText: parent.toggleLoader.attribute("innerText") == "Show" and "Hide" or "Show"
         })
         data.show = !data.show
-    }
+    },
+    changeAddress: () => {
+        data.address = {
+            street: "455 Bloop St."
+        }
+    },
 }
 
 const parent = createElement(template, data, methods)
+
+println("Done")
 
 // var breed_data = {}
 // var prev_market_price = 0
