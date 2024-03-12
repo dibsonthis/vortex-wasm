@@ -106,6 +106,7 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
       }
 Module['FS_createPath']("/", "src", true, true);
 Module['FS_createPath']("/src", "components", true, true);
+Module['FS_createPath']("/src/components", "Modal", true, true);
 Module['FS_createPath']("/src/components", "OtherComponent", true, true);
 Module['FS_createPath']("/src/components", "SomeComponent", true, true);
 Module['FS_createPath']("/src", "lib", true, true);
@@ -177,6 +178,6 @@ Module['FS_createPath']("/src", "resources", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/src/components/OtherComponent/OtherComponent.vtx", "start": 0, "end": 693}, {"filename": "/src/components/SomeComponent/SomeComponent.vtx", "start": 693, "end": 4723}, {"filename": "/src/components/SomeComponent/template.html", "start": 4723, "end": 6680}, {"filename": "/src/lib/whirlwind.vtx", "start": 6680, "end": 61006}, {"filename": "/src/main.vtx", "start": 61006, "end": 67958}, {"filename": "/src/resources/cat.jpg", "start": 67958, "end": 120976}, {"filename": "/src/resources/loader.gif", "start": 120976, "end": 193167}], "remote_package_size": 193167});
+    loadPackage({"files": [{"filename": "/src/components/Modal/Modal.vtx", "start": 0, "end": 1031}, {"filename": "/src/components/OtherComponent/OtherComponent.vtx", "start": 1031, "end": 2138}, {"filename": "/src/components/SomeComponent/SomeComponent.vtx", "start": 2138, "end": 7105}, {"filename": "/src/components/SomeComponent/template.html", "start": 7105, "end": 9062}, {"filename": "/src/lib/whirlwind.vtx", "start": 9062, "end": 64381}, {"filename": "/src/main.vtx", "start": 64381, "end": 71918}, {"filename": "/src/resources/cat.jpg", "start": 71918, "end": 124936}, {"filename": "/src/resources/loader.gif", "start": 124936, "end": 197127}], "remote_package_size": 197127});
 
   })();

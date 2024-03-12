@@ -3,9 +3,9 @@ import [replaceAll] : string
 import io
 
 import [OtherComponent] : "../OtherComponent/OtherComponent"
+import [Modal] : "../Modal/Modal"
 
 const template = `
-
 <style>
 .btn {
     padding: 10px;
@@ -24,17 +24,21 @@ const template = `
 </style>
 
 <div>
-<img
-    %if: show
-    #loader 
-    src: "src/resources/cat.jpg" 
-    $width: 100px 
-    $height: 100px
-    $position: relative
-    @enter: sayHi
-    @leave: sayBye
-    @move: printStuff
-/>
+<div #imgDiv>
+    <img
+        %if: show
+        #topImage 
+        src: "src/resources/cat.jpg" 
+        $width: 200px 
+        $height: 200px
+        $position: relative
+        $margin: 30px
+        $borderRadius: 10px
+        @enter: sayHi
+        @leave: sayBye
+        @move: printStuff
+    />
+</div>
 <label $fontSize: 20px>
     <span>Name:</span>
 </label>
@@ -89,6 +93,14 @@ const template = `
 </button>
 <OtherComponent color: red />
 <button 
+    #showModal
+    @click: onShowModal
+    $backgroundColor: "rgb(100, 200, 100)"
+    className: btn
+> 
+    Show Modal
+</button>
+<button 
     #changeAddress
     @click: changeAddress
     $backgroundColor: "rgb(100, 200, 100)"
@@ -96,6 +108,16 @@ const template = `
 > 
     Change address
 </button>
+<!- <Modal #modal title: "Hello"  content: "This is the content"  variant: success $display: none /> ->
+<div %if: showModal>
+    <Modal 
+        #modal
+        title: "Hello" 
+        content: "This is the content" 
+        variant: success
+        @customCloseEvent: onCloseModal
+    />
+</div>
 </div>
 `
 
@@ -110,7 +132,8 @@ const data = {
     mousePos: {
         x: 0,
         y: 0
-    }
+    },
+    showModal: false
 }
 
 const methods = (data) => ({
@@ -120,7 +143,7 @@ const methods = (data) => ({
                 backgroundColor: data.props.favColor
             }
         })
-        parent.loader.update({
+        parent.imgDiv.topImage.update({
             src: data.props.img
         })
     },
@@ -158,20 +181,20 @@ const methods = (data) => ({
     sayHi: (parent) => {
         println("Hi")
         println(event())
-        parent.loader.update({
+        parent.imgDiv.topImage.update({
             style: {
-                width: string(parent.loader.attribute("style.width").replaceAll("px", "").number() * 2) + "px",
-                height: string(parent.loader.attribute("style.height").replaceAll("px", "").number() * 2) + "px"
+                width: string(parent.imgDiv.topImage.attribute("style.width").replaceAll("px", "").number() * 2) + "px",
+                height: string(parent.imgDiv.topImage.attribute("style.height").replaceAll("px", "").number() * 2) + "px"
             }
         })
     },
     sayBye: (parent) => {
         println("Bye")
         println(event())
-        parent.loader.update({
+        parent.imgDiv.topImage.update({
             style: {
-                width: string(parent.loader.attribute("style.width").replaceAll("px", "").number() / 2) + "px",
-                height: string(parent.loader.attribute("style.height").replaceAll("px", "").number() / 2) + "px",
+                width: string(parent.imgDiv.topImage.attribute("style.width").replaceAll("px", "").number() / 2) + "px",
+                height: string(parent.imgDiv.topImage.attribute("style.height").replaceAll("px", "").number() / 2) + "px",
             }
         })
     },
@@ -179,11 +202,23 @@ const methods = (data) => ({
         var e = event()
         data.mousePos.x = e.x
         data.mousePos.y = e.y
+    },
+    onShowModal: (parent) => {
+        data.showModal = true
+        // parent.modal.update({
+        //     style: {
+        //         display: ""
+        //     }
+        // })
+    },
+    onCloseModal: () => {
+        data.showModal = false
     }
 })
 
 const components = {
-    OtherComponent: OtherComponent
+    OtherComponent: OtherComponent,
+    Modal: Modal
 }
 
 const SomeComponent = component(template, data, methods, components)

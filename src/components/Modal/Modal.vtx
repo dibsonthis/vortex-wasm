@@ -1,0 +1,47 @@
+import [component, emit_event] : "../../lib/whirlwind"
+
+const template = `
+
+<style>
+    .modal {
+        width: 400px;
+        padding: 20px;
+        margin: 100px auto;
+        background: {{ props.variant == "success" and "green" or "white" }};
+        color: {{ props.variant == "success" and "white" or "black" }};
+        border-radius: 10px;
+    }
+
+    .backdrop {
+        top: 0;
+        position: fixed;
+        background: rgba(0, 0, 0, 0.5);
+        width: 100%;
+        height: 100%;
+    }
+
+</style>
+
+<div>
+    <div className: backdrop>
+        <div className: modal>
+            <h1> {{ props.title }} </h1>
+            <p> {{ props.content }} </p>
+            <button @click: close> Close </button>
+        </div>
+    </div>
+</div>
+`
+
+const methods = (data) => ({
+    close: (parent) => {
+        emit_event(parent, "customCloseEvent", "Hello")
+        // parent.update({
+        //     style: {
+        //         display: "none"
+        //     }
+        // })
+    }
+})
+
+const Modal = component(template, {}, methods)

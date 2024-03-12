@@ -1,14 +1,83 @@
-import [component, value] : "../../lib/whirlwind"
+import [component, emit_event] : "../../lib/whirlwind"
+
+const template = `
+
+<style>
+    .modal {
+        width: 400px;
+        padding: 20px;
+        margin: 100px auto;
+        background: {{ props.variant == "success" and "green" or "white" }};
+        color: {{ props.variant == "success" and "white" or "black" }};
+        border-radius: 10px;
+    }
+
+    .backdrop {
+        top: 0;
+        position: fixed;
+        background: rgba(0, 0, 0, 0.5);
+        width: 100%;
+        height: 100%;
+    }
+
+</style>
+
+<div>
+    <div className: backdrop>
+        <div className: modal>
+            <h1> {{ props.title }} </h1>
+            <p> {{ props.content }} </p>
+            <button @click: close> Close </button>
+        </div>
+    </div>
+</div>
+`
+
+const methods = (data) => ({
+    close: (parent) => {
+        emit_event(parent, "customCloseEvent", "Hello")
+        // parent.update({
+        //     style: {
+        //         display: "none"
+        //     }
+        // })
+    }
+})
+
+const Modal = component(template, {}, methods)import [component, value] : "../../lib/whirlwind"
 import io
 
 const template = `
+<style>
+.btn {
+    padding: 10px;
+    margin: 5px;
+    color: white;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+
+    transition: all 0.3s ease-in-out;
+    &:hover {
+        background-color: #3E95FF !important;
+    }
+}
+</style>
+
 <div>
     <h1> {{ title }} </h1>
     <div #nameDiv>
-        <input #nameInput />
-        <button @click: updateTitle> Change title </button>
+        <input #nameInput $height: 30px $borderRadius: 10px />
+        <button 
+            className: btn
+            $backgroundColor: green
+            @click: updateTitle
+        > 
+            Change title 
+        </button>
     </div>
-    <p> Hi, my name is {{ name }} and I am {{ age }} years old. </p>
+    <p> Hi, my name is "{{ name }}" and I am {{ age }} years old. </p>
     <p> My favorite color is {{ props.color }}. </p>
 </div>
 `
@@ -33,9 +102,9 @@ import [replaceAll] : string
 import io
 
 import [OtherComponent] : "../OtherComponent/OtherComponent"
+import [Modal] : "../Modal/Modal"
 
 const template = `
-
 <style>
 .btn {
     padding: 10px;
@@ -54,17 +123,21 @@ const template = `
 </style>
 
 <div>
-<img
-    %if: show
-    #loader 
-    src: "src/resources/cat.jpg" 
-    $width: 100px 
-    $height: 100px
-    $position: relative
-    @enter: sayHi
-    @leave: sayBye
-    @move: printStuff
-/>
+<div #imgDiv>
+    <img
+        %if: show
+        #topImage 
+        src: "src/resources/cat.jpg" 
+        $width: 200px 
+        $height: 200px
+        $position: relative
+        $margin: 30px
+        $borderRadius: 10px
+        @enter: sayHi
+        @leave: sayBye
+        @move: printStuff
+    />
+</div>
 <label $fontSize: 20px>
     <span>Name:</span>
 </label>
@@ -119,6 +192,14 @@ const template = `
 </button>
 <OtherComponent color: red />
 <button 
+    #showModal
+    @click: onShowModal
+    $backgroundColor: "rgb(100, 200, 100)"
+    className: btn
+> 
+    Show Modal
+</button>
+<button 
     #changeAddress
     @click: changeAddress
     $backgroundColor: "rgb(100, 200, 100)"
@@ -126,6 +207,16 @@ const template = `
 > 
     Change address
 </button>
+<!- <Modal #modal title: "Hello"  content: "This is the content"  variant: success $display: none /> ->
+<div %if: showModal>
+    <Modal 
+        #modal
+        title: "Hello" 
+        content: "This is the content" 
+        variant: success
+        @customCloseEvent: onCloseModal
+    />
+</div>
 </div>
 `
 
@@ -140,7 +231,8 @@ const data = {
     mousePos: {
         x: 0,
         y: 0
-    }
+    },
+    showModal: false
 }
 
 const methods = (data) => ({
@@ -150,7 +242,7 @@ const methods = (data) => ({
                 backgroundColor: data.props.favColor
             }
         })
-        parent.loader.update({
+        parent.imgDiv.topImage.update({
             src: data.props.img
         })
     },
@@ -188,20 +280,20 @@ const methods = (data) => ({
     sayHi: (parent) => {
         println("Hi")
         println(event())
-        parent.loader.update({
+        parent.imgDiv.topImage.update({
             style: {
-                width: string(parent.loader.attribute("style.width").replaceAll("px", "").number() * 2) + "px",
-                height: string(parent.loader.attribute("style.height").replaceAll("px", "").number() * 2) + "px"
+                width: string(parent.imgDiv.topImage.attribute("style.width").replaceAll("px", "").number() * 2) + "px",
+                height: string(parent.imgDiv.topImage.attribute("style.height").replaceAll("px", "").number() * 2) + "px"
             }
         })
     },
     sayBye: (parent) => {
         println("Bye")
         println(event())
-        parent.loader.update({
+        parent.imgDiv.topImage.update({
             style: {
-                width: string(parent.loader.attribute("style.width").replaceAll("px", "").number() / 2) + "px",
-                height: string(parent.loader.attribute("style.height").replaceAll("px", "").number() / 2) + "px",
+                width: string(parent.imgDiv.topImage.attribute("style.width").replaceAll("px", "").number() / 2) + "px",
+                height: string(parent.imgDiv.topImage.attribute("style.height").replaceAll("px", "").number() / 2) + "px",
             }
         })
     },
@@ -209,11 +301,23 @@ const methods = (data) => ({
         var e = event()
         data.mousePos.x = e.x
         data.mousePos.y = e.y
+    },
+    onShowModal: (parent) => {
+        data.showModal = true
+        // parent.modal.update({
+        //     style: {
+        //         display: ""
+        //     }
+        // })
+    },
+    onCloseModal: () => {
+        data.showModal = false
     }
 })
 
 const components = {
-    OtherComponent: OtherComponent
+    OtherComponent: OtherComponent,
+    Modal: Modal
 }
 
 const SomeComponent = component(template, data, methods, components)<style>
@@ -398,6 +502,19 @@ const set_prop_hook = (obj, prop, hook) => {
     }
 
     return container[_prop[_prop.length()-1]]::onChange((e) => hook(e))
+}
+
+const emit_event = (target, name, content) => {
+    const script = f`
+        var customEvent = new CustomEvent('${name}', {
+            detail: {
+                data: "${content}"
+            }
+        });
+
+        document.getElementById('${target.id}').dispatchEvent(customEvent);
+        `
+    wasm.run_script(script)
 }
 
 type element = (config = {}, parent = None) => {
@@ -1518,6 +1635,14 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     e.update({
                         onMouseMove: injected_method
                     })
+                } else {
+                    // Add a custom event listener
+                    e[key] = wasm.make_closure(injected_method)
+                    wasm.run_script(f`
+                        document.getElementById("${e.id}").addEventListener("${key}", function(e) {
+                        ${__script_event_stringify}
+                        Module.ccall('vortex_eval','void',['number'],[${e[key]}]);
+                    });`)
                 }
             })
 
@@ -1532,13 +1657,20 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 if (key == "if") {
                     const predicate = data[value]
                     const predicateOnChange = predicate.info().onChangeHook
+                    if (!predicate) {
+                        e.update({
+                            style: {
+                                display: "none"
+                            }
+                        })
+                    }
                     if (predicateOnChange) {
                         data[value]::onChange((info) => {
                             predicateOnChange(info)
                             if (info.current) {
                                 e.update({
                                     style: {
-                                        display: "block"
+                                        display: ""
                                     }
                                 })
                             } else {
@@ -1554,7 +1686,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                             if (info.current) {
                                 e.update({
                                     style: {
-                                        display: "block"
+                                        display: ""
                                     }
                                 })
                             } else {
@@ -1858,12 +1990,36 @@ const component = (html, data = {}, methods = (data) => ({}), components = {}) =
         var _data = copy(data)
         return createElement(html, _data, methods, props, components)
     }
-}import [SomeComponent] : "components/SomeComponent/SomeComponent"
+}import [component] : "lib/whirlwind"
+import [SomeComponent] : "components/SomeComponent/SomeComponent"
 
-SomeComponent({
-    favColor: "lightblue",
-    img: "src/resources/cat.jpg"
+const template = `
+    <style>
+        .app {
+            text-align: center;
+            color: #2c3e50;
+            margin-top: 60px;
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-font-smoothing: antialiased;
+            font-family: Avenir, Helvetica, Arial, sans-serif;
+        }
+    </style>
+
+    <div className: "app">
+        <SomeComponent favColor: lightblue img: "src/resources/cat.jpg" />
+    </div>
+`
+
+const Main = component(template, {}, (data) => ({}), {
+    SomeComponent: SomeComponent
 })
+
+Main()
+
+// SomeComponent({
+//     favColor: "lightblue",
+//     img: "src/resources/cat.jpg"
+// })
 
 // var breed_data = {}
 // var prev_market_price = 0

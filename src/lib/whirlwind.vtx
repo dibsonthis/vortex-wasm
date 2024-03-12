@@ -92,6 +92,19 @@ const set_prop_hook = (obj, prop, hook) => {
     return container[_prop[_prop.length()-1]]::onChange((e) => hook(e))
 }
 
+const emit_event = (target, name, content) => {
+    const script = f`
+        var customEvent = new CustomEvent('${name}', {
+            detail: {
+                data: "${content}"
+            }
+        });
+
+        document.getElementById('${target.id}').dispatchEvent(customEvent);
+        `
+    wasm.run_script(script)
+}
+
 type element = (config = {}, parent = None) => {
     config.type or (config.type = "div")
     config.id or (config.id = "e_" + string(math.abs(random.rand())))
@@ -1210,6 +1223,14 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     e.update({
                         onMouseMove: injected_method
                     })
+                } else {
+                    // Add a custom event listener
+                    e[key] = wasm.make_closure(injected_method)
+                    wasm.run_script(f`
+                        document.getElementById("${e.id}").addEventListener("${key}", function(e) {
+                        ${__script_event_stringify}
+                        Module.ccall('vortex_eval','void',['number'],[${e[key]}]);
+                    });`)
                 }
             })
 
@@ -1224,13 +1245,20 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 if (key == "if") {
                     const predicate = data[value]
                     const predicateOnChange = predicate.info().onChangeHook
+                    if (!predicate) {
+                        e.update({
+                            style: {
+                                display: "none"
+                            }
+                        })
+                    }
                     if (predicateOnChange) {
                         data[value]::onChange((info) => {
                             predicateOnChange(info)
                             if (info.current) {
                                 e.update({
                                     style: {
-                                        display: "block"
+                                        display: ""
                                     }
                                 })
                             } else {
@@ -1246,7 +1274,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                             if (info.current) {
                                 e.update({
                                     style: {
-                                        display: "block"
+                                        display: ""
                                     }
                                 })
                             } else {

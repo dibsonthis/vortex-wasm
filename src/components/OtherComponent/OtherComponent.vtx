@@ -2,13 +2,36 @@ import [component, value] : "../../lib/whirlwind"
 import io
 
 const template = `
+<style>
+.btn {
+    padding: 10px;
+    margin: 5px;
+    color: white;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+
+    transition: all 0.3s ease-in-out;
+    &:hover {
+        background-color: #3E95FF !important;
+    }
+}
+</style>
+
 <div>
     <h1> {{ title }} </h1>
     <div #nameDiv>
-        <input #nameInput />
-        <button @click: updateTitle> Change title </button>
+        <input #nameInput $height: 30px $borderRadius: 10px />
+        <button 
+            className: btn
+            $backgroundColor: green
+            @click: updateTitle
+        > 
+            Change title 
+        </button>
     </div>
-    <p> Hi, my name is {{ name }} and I am {{ age }} years old. </p>
+    <p> Hi, my name is "{{ name }}" and I am {{ age }} years old. </p>
     <p> My favorite color is {{ props.color }}. </p>
 </div>
 `

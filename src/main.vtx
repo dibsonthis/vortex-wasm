@@ -1,9 +1,33 @@
+import [component] : "lib/whirlwind"
 import [SomeComponent] : "components/SomeComponent/SomeComponent"
 
-SomeComponent({
-    favColor: "lightblue",
-    img: "src/resources/cat.jpg"
+const template = `
+    <style>
+        .app {
+            text-align: center;
+            color: #2c3e50;
+            margin-top: 60px;
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-font-smoothing: antialiased;
+            font-family: Avenir, Helvetica, Arial, sans-serif;
+        }
+    </style>
+
+    <div className: "app">
+        <SomeComponent favColor: lightblue img: "src/resources/cat.jpg" />
+    </div>
+`
+
+const Main = component(template, {}, (data) => ({}), {
+    SomeComponent: SomeComponent
 })
+
+Main()
+
+// SomeComponent({
+//     favColor: "lightblue",
+//     img: "src/resources/cat.jpg"
+// })
 
 // var breed_data = {}
 // var prev_market_price = 0
