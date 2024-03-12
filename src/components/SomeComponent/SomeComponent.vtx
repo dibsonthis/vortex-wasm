@@ -109,14 +109,17 @@ const template = `
     Change address
 </button>
 <!- <Modal #modal title: "Hello"  content: "This is the content"  variant: success $display: none /> ->
-<div %if: showModal>
-    <Modal 
+<div %if: showModal className: modaldiv>
+    <Modal
         #modal
         title: "Hello" 
         content: "This is the content" 
         variant: success
         @customCloseEvent: onCloseModal
-    />
+    > 
+        <p> Hello, this is the custom content I am passing. </p> 
+        <p> Regards, {{ name }} </p>
+    </Modal>
 </div>
 </div>
 `

@@ -1070,14 +1070,16 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
     var parent;
     var parent_exists = false;
 
+    var customElementStack = []
+
     var deps = {}
-    
-    var is_custom = false
 
     tags.forEach((tag, i) => {
+        var is_custom = upper.contains(tag.name[0])
         const props = tag.extractProperties();
         const id = props.id;
         var dependencies = []
+
         if (tag.is_start) {
             var config = {
                 type: tag.name
@@ -1106,7 +1108,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             var e;
 
-            if (upper.contains(tag.name[0])) {
+            if (is_custom) {
                 const comp = components[tag.name]
                 if (!comp) {
                     println(f"Warning: No such component '${tag.name}'" )
@@ -1120,6 +1122,17 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 return
             }
 
+            if (tag.name == "children") {
+                parent._children_section = e
+                // if (customElementStack.length() > 0) {
+                //     var last_stack_elem = customElementStack[customElementStack.length() - 1]
+                //     last_stack_elem._children_section = e
+                // } else {
+                //     var last_stack_elem = stack[stack.length() - 1]
+                //     last_stack_elem._children_section = e
+                // }
+            }
+
             if (stack.length() == 0) {
                 if (parent_exists) {
                     error("Only one parent allowed", "TemplateError")
@@ -1127,10 +1140,27 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 parent = e
                 parent_exists = true
             } else {
-                var last_stack_elem = stack[stack.length() - 1]
-                last_stack_elem.children.append(e)
-                wasm.run_script(f"document.getElementById(`${last_stack_elem.id}`).appendChild(document.getElementById(`${e.id}`));")
-                id and (last_stack_elem[id] = e)
+                if (customElementStack.length() > 0) {
+                    // We have a custom element on the stack
+                    // We want to append children into it
+                    // But only in the children slot
+                    var last_stack_elem = customElementStack[customElementStack.length() - 1]
+                    last_stack_elem.children.append(e)
+                    // If the element's _children_section doesn't exist
+                    // We append to the end
+                    if (last_stack_elem._children_section) {
+                        wasm.run_script(f"document.getElementById(`${last_stack_elem._children_section.id}`).appendChild(document.getElementById(`${e.id}`));")
+                        id and (last_stack_elem._children_section[id] = e)
+                    } else {
+                        wasm.run_script(f"document.getElementById(`${last_stack_elem.id}`).appendChild(document.getElementById(`${e.id}`));")
+                        id and (last_stack_elem[id] = e)
+                        }
+                } else {
+                    var last_stack_elem = stack[stack.length() - 1]
+                    last_stack_elem.children.append(e)
+                    wasm.run_script(f"document.getElementById(`${last_stack_elem.id}`).appendChild(document.getElementById(`${e.id}`));")
+                    id and (last_stack_elem[id] = e)
+                }
             }
 
             // We apply an onChange hook here so that whenever these variables change
@@ -1555,14 +1585,31 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     
                 }
             })
+
+            if (!tag.self_ending and is_custom) {
+                e.customName = tag.name
+                customElementStack.append(e)
+            }
             
-            if (!tag.self_ending) {
+            if (!tag.self_ending and !is_custom) {
                 stack.append(e)
             }
         } else {
             if (tag.name == "style") {
                 return
             }
+
+            if (is_custom) {
+                var last_stack_elem = customElementStack[customElementStack.length() - 1]
+                if (tag.name == last_stack_elem.customName) {
+                    customElementStack.remove(customElementStack.length() - 1)
+                } else {
+                    error("Malformed HTML")
+                }
+
+                return
+            }
+
             var last_stack_elem = stack[stack.length() - 1]
             if (tag.name == last_stack_elem.type) {
                 stack.remove(stack.length() - 1)

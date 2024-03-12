@@ -20,14 +20,21 @@ const template = `
         height: 100%;
     }
 
+    .closebtn {
+        transition: all 0.3s ease-in-out;
+        &:hover {
+            background-color: black !important;
+        }
+    }
+
 </style>
 
 <div>
     <div className: backdrop @click_self: close>
         <div className: modal>
             <h1> {{ props.title }} </h1>
-            <p> {{ props.content }} </p>
-            <button @click: close> Close </button>
+                <children />
+            <button className: "btn closebtn" $backgroundColor: red @click: close> Close </button>
         </div>
     </div>
 </div>
