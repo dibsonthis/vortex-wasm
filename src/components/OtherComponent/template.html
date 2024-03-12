@@ -1,4 +1,8 @@
 <div>
-    <h1> {{ title }}</h1>
-    <b> Hi, my name is {{ name }} and I am {{ age }} years old.</b>
+    <h1> {{ title }} </h1>
+    <p> Hi, my name is {{ name }} and I am {{ age }} years old.</p>
+    <p> My favorite color is {{ props.color }}.</p>
+    <div>
+        <button @click: updateTitle> Change title </button>
+    </div>
 </div>

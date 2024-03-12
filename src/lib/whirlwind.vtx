@@ -1057,6 +1057,8 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
     var parent_exists = false;
 
     var deps = {}
+    
+    var is_custom = false
 
     tags.forEach((tag, i) => {
         const props = tag.extractProperties();
@@ -1088,13 +1090,16 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 // data = with_hook(data, (e) => {})
             }
 
-            var e = element(config)
+            var e;
 
             if (upper.contains(tag.name[0])) {
                 const comp = components[tag.name]
-                if (comp) {
-                    e = comp()
+                if (!comp) {
+                    println(f"Warning: No such component '${tag.name}'" )
                 }
+                e = comp(props.props)
+            } else {
+               e = element(config)
             }
 
             if (tag.name == "style") {
@@ -1529,7 +1534,12 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
     // deps.info().keys.forEach((k) => println(k, ": ", deps[k]))
 
     if (methods.init) {
-        methods.init(parent)
+        const arity = methods.init.info().arity
+        if (arity == 0) {
+            methods.init()
+        } else if (arity == 1) {
+            methods.init(parent)
+        }
     }
 
     return parent

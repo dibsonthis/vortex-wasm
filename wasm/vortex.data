@@ -10,9 +10,22 @@ const data = {
     name: "Jason",
 }
 
-const OtherComponent = component(template, data)<div>
+const methods = (data) => ({
+    init: () => {
+        println(data.props)
+    },
+    updateTitle: () => {
+        data.title = "Hello there"
+    }
+})
+
+const OtherComponent = component(template, data, methods)<div>
     <h1> {{ title }}</h1>
-    <b> Hi, my name is {{ name }} and I am {{ age }} years old.</b>
+    <p> Hi, my name is {{ name }} and I am {{ age }} years old.</p>
+    <p> My favorite color is {{ props.color }}.</p>
+    <div>
+        <button @click: updateTitle> Change title </button>
+    </div>
 </div>import [attribute, event, component] : "../../lib/whirlwind"
 import [replaceAll] : string
 import io
@@ -189,8 +202,7 @@ const SomeComponent = component(template, data, methods, components)<style>
     > 
         Hide 
     </button>
-    <OtherComponent />
-    <OtherComponent />
+    <OtherComponent color: red />
     <button 
         #changeAddress
         @click: changeAddress
@@ -1258,6 +1270,8 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
     var parent_exists = false;
 
     var deps = {}
+    
+    var is_custom = false
 
     tags.forEach((tag, i) => {
         const props = tag.extractProperties();
@@ -1289,13 +1303,16 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 // data = with_hook(data, (e) => {})
             }
 
-            var e = element(config)
+            var e;
 
             if (upper.contains(tag.name[0])) {
                 const comp = components[tag.name]
-                if (comp) {
-                    e = comp()
+                if (!comp) {
+                    println(f"Warning: No such component '${tag.name}'" )
                 }
+                e = comp(props.props)
+            } else {
+               e = element(config)
             }
 
             if (tag.name == "style") {
@@ -1730,7 +1747,12 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
     // deps.info().keys.forEach((k) => println(k, ": ", deps[k]))
 
     if (methods.init) {
-        methods.init(parent)
+        const arity = methods.init.info().arity
+        if (arity == 0) {
+            methods.init()
+        } else if (arity == 1) {
+            methods.init(parent)
+        }
     }
 
     return parent

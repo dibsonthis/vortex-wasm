@@ -10,4 +10,13 @@ const data = {
     name: "Jason",
 }
 
-const OtherComponent = component(template, data)
+const methods = (data) => ({
+    init: () => {
+        println(data.props)
+    },
+    updateTitle: () => {
+        data.title = "Hello there"
+    }
+})
+
+const OtherComponent = component(template, data, methods)
