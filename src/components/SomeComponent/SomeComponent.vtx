@@ -29,7 +29,7 @@ const template = `
         %if: show
         #topImage 
         src: "src/resources/cat.jpg" 
-        $width: 200px 
+        $width: 300px 
         $height: 200px
         $position: relative
         $margin: 30px
@@ -205,14 +205,11 @@ const methods = (data) => ({
     },
     onShowModal: (parent) => {
         data.showModal = true
-        // parent.modal.update({
-        //     style: {
-        //         display: ""
-        //     }
-        // })
     },
     onCloseModal: () => {
+        const d = event().data
         data.showModal = false
+        println(d)
     }
 })
 

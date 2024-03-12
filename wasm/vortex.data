@@ -23,7 +23,7 @@ const template = `
 </style>
 
 <div>
-    <div className: backdrop>
+    <div className: backdrop @click_self: close>
         <div className: modal>
             <h1> {{ props.title }} </h1>
             <p> {{ props.content }} </p>
@@ -35,12 +35,7 @@ const template = `
 
 const methods = (data) => ({
     close: (parent) => {
-        emit_event(parent, "customCloseEvent", "Hello")
-        // parent.update({
-        //     style: {
-        //         display: "none"
-        //     }
-        // })
+        parent.emit_event("customCloseEvent", "closing the modal")
     }
 })
 
@@ -128,7 +123,7 @@ const template = `
         %if: show
         #topImage 
         src: "src/resources/cat.jpg" 
-        $width: 200px 
+        $width: 300px 
         $height: 200px
         $position: relative
         $margin: 30px
@@ -304,14 +299,11 @@ const methods = (data) => ({
     },
     onShowModal: (parent) => {
         data.showModal = true
-        // parent.modal.update({
-        //     style: {
-        //         display: ""
-        //     }
-        // })
     },
     onCloseModal: () => {
+        const d = event().data
         data.showModal = false
+        println(d)
     }
 })
 
@@ -431,7 +423,8 @@ const __script_event_stringify = "globalThis._event = JSON.stringify({
     },
     target: {
         value: e.target?.value
-    }
+    },
+    data: e.detail?.data
 });"
 
 const get_property = (obj, prop) => {
@@ -504,7 +497,7 @@ const set_prop_hook = (obj, prop, hook) => {
     return container[_prop[_prop.length()-1]]::onChange((e) => hook(e))
 }
 
-const emit_event = (target, name, content) => {
+const emit_event = (target, name, content = "") => {
     const script = f`
         var customEvent = new CustomEvent('${name}', {
             detail: {
@@ -1611,6 +1604,18 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     e.update({
                         onClick: injected_method
                     })
+                } else if (key == "click_self") {
+                    e.onClick = wasm.make_closure(injected_method)
+                    const script = f`
+                        const element = document.getElementById('${e.id}');
+                        element.onclick = function(e) {
+                            ${__script_event_stringify}
+                            if (e.target == element) {
+                                Module.ccall('vortex_eval','void',['number'],[${e.onClick}]);
+                            }
+                        };
+                    `
+                    wasm.run_script(script)
                 } else if (key == "blur") {
                     e.update({
                         onBlur: injected_method
