@@ -1,8 +1,17 @@
-import [attribute, event, component] : "../../lib/whirlwind"
-import [replaceAll] : string
+import [component, value] : "../../lib/whirlwind"
 import io
 
-var template = io.readf("template.html")
+const template = `
+<div>
+    <h1> {{ title }} </h1>
+    <div #nameDiv>
+        <input #nameInput />
+        <button @click: updateTitle> Change title </button>
+    </div>
+    <p> Hi, my name is {{ name }} and I am {{ age }} years old. </p>
+    <p> My favorite color is {{ props.color }}. </p>
+</div>
+`
 
 const data = {
     title: "Hi there",
@@ -11,11 +20,11 @@ const data = {
 }
 
 const methods = (data) => ({
-    init: () => {
-        println(data.props)
-    },
-    updateTitle: () => {
-        data.title = "Hello there"
+    updateTitle: (parent) => {
+        data.title = parent.nameDiv.nameInput.value()
+        parent.nameDiv.nameInput.update({
+            value: ""
+        })
     }
 })
 

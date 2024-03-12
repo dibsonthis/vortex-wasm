@@ -1,8 +1,17 @@
-import [attribute, event, component] : "../../lib/whirlwind"
-import [replaceAll] : string
+import [component, value] : "../../lib/whirlwind"
 import io
 
-var template = io.readf("template.html")
+const template = `
+<div>
+    <h1> {{ title }} </h1>
+    <div #nameDiv>
+        <input #nameInput />
+        <button @click: updateTitle> Change title </button>
+    </div>
+    <p> Hi, my name is {{ name }} and I am {{ age }} years old. </p>
+    <p> My favorite color is {{ props.color }}. </p>
+</div>
+`
 
 const data = {
     title: "Hi there",
@@ -11,28 +20,114 @@ const data = {
 }
 
 const methods = (data) => ({
-    init: () => {
-        println(data.props)
-    },
-    updateTitle: () => {
-        data.title = "Hello there"
+    updateTitle: (parent) => {
+        data.title = parent.nameDiv.nameInput.value()
+        parent.nameDiv.nameInput.update({
+            value: ""
+        })
     }
 })
 
-const OtherComponent = component(template, data, methods)<div>
-    <h1> {{ title }}</h1>
-    <p> Hi, my name is {{ name }} and I am {{ age }} years old.</p>
-    <p> My favorite color is {{ props.color }}.</p>
-    <div>
-        <button @click: updateTitle> Change title </button>
-    </div>
-</div>import [attribute, event, component] : "../../lib/whirlwind"
+const OtherComponent = component(template, data, methods)import [attribute, event, component] : "../../lib/whirlwind"
 import [replaceAll] : string
 import io
 
 import [OtherComponent] : "../OtherComponent/OtherComponent"
 
-var template = io.readf("template.html")
+const template = `
+
+<style>
+.btn {
+    padding: 10px;
+    margin: 5px;
+    color: white;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+
+    transition: all 0.3s ease-in-out;
+    &:hover {
+        background-color: #3E95FF !important;
+    }
+}
+</style>
+
+<div>
+<img
+    %if: show
+    #loader 
+    src: "src/resources/cat.jpg" 
+    $width: 100px 
+    $height: 100px
+    $position: relative
+    @enter: sayHi
+    @leave: sayBye
+    @move: printStuff
+/>
+<label $fontSize: 20px>
+    <span>Name:</span>
+</label>
+<input 
+    #nameInput
+    @input: updateName
+    $margin: 5px
+/>
+<input 
+    #ageInput
+    @input: updateAge
+    _type: range 
+    min:"0" 
+    max:"200" 
+    value:"50"
+    $width: 200px />
+<p $fontWeight: bold> Hi, my name is "{{ name }}", my age is {{ age }} - I live at {{ address.street }}. Fav color is {{ props.favColor }} </p>
+<p>{{ age * 3.56 }}</p>
+<p>{{ age / 3.56 }}</p>
+<p>{ {{ mousePos.x }}, {{ mousePos.y }} }</p>
+<button 
+    #incrButton 
+    @click: incr
+    $backgroundColor: green
+    className: btn
+> 
+    Increase
+</button>
+<button 
+    #decrButton 
+    @click: decr 
+    $backgroundColor: red
+    className: btn
+> 
+    Decrease 
+</button>
+<button 
+    #changeName 
+    @click: changeName
+    $backgroundColor: orange
+    className: btn
+> 
+    Change name 
+</button>
+<button 
+    #toggleLoader
+    @click: toggleLoader
+    $backgroundColor: gray
+    className: btn
+> 
+    Hide 
+</button>
+<OtherComponent color: red />
+<button 
+    #changeAddress
+    @click: changeAddress
+    $backgroundColor: "rgb(100, 200, 100)"
+    className: btn
+> 
+    Change address
+</button>
+</div>
+`
 
 const data = {
     age: 45,
