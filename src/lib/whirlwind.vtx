@@ -1,8 +1,26 @@
 import wasm
 import math
+import json
 import random
 import [forEach] : functional
 import [substring, trim, split, replaceAll, contains, startsWith] : string
+
+const __script_event_stringify = "globalThis._event = JSON.stringify({
+    type: e.type,
+    clientX: e.clientX,
+    clientY: e.clientY,
+    ctrlKey: e.ctrlKey,
+    altKey: e.altKey,
+    shiftKey: e.shiftKey,
+    x: e.x,
+    y: e.y,
+    fromElement: {
+        id: e?.fromElement?.id
+    },
+    target: {
+        value: e.target?.value
+    }
+});"
 
 const get_property = (obj, prop) => {
     var _prop = prop.split(".")
@@ -99,29 +117,65 @@ type element = (config = {}, parent = None) => {
         }
         if (key == "onClick") {
             elem.onClick = wasm.make_closure(config[key])
-            script += f"_elem.onclick = function() {
+            script += f"_elem.onclick = function(e) {
+                ${__script_event_stringify}
                 Module.ccall('vortex_eval','void',['number'],[${elem.onClick}]);
             };"
             continue;
         }
         if (key == "onInput") {
             elem.onInput = wasm.make_closure(config[key])
-            script += f"_elem.oninput = function() {
+            script += f"_elem.oninput = function(e) {
+                ${__script_event_stringify}
                 Module.ccall('vortex_eval','void',['number'],[${elem.onInput}]);
             };"
             continue;
         }
         if (key == "onChange") {
             elem.onChange = wasm.make_closure(config[key])
-            script += f"_elem.onchange = function() {
+            script += f"_elem.onchange = function(e) {
+                ${__script_event_stringify}
                 Module.ccall('vortex_eval','void',['number'],[${elem.onChange}]);
             };"
             continue;
         }
         if (key == "onBlur") {
             elem.onBlur = wasm.make_closure(config[key])
-            script += f"_elem.onblur = function() {
+            script += f"_elem.onblur = function(e) {
+                ${__script_event_stringify}
                 Module.ccall('vortex_eval','void',['number'],[${elem.onBlur}]);
+            };"
+            continue;
+        }
+        if (key == "onMouseEnter") {
+            elem.onMouseEnter = wasm.make_closure(config[key])
+            script += f"_elem.onmouseenter = function(e) {
+                ${__script_event_stringify}
+                Module.ccall('vortex_eval','void',['number'],[${elem.onMouseEnter}]);
+            };"
+            continue;
+        }
+        if (key == "onMouseLeave") {
+            elem.onMouseEnter = wasm.make_closure(config[key])
+            script += f"_elem.onmouseleave = function(e) {
+                ${__script_event_stringify}
+                Module.ccall('vortex_eval','void',['number'],[${elem.onMouseLeave}]);
+            };"
+            continue;
+        }
+        if (key == "onMouseOver") {
+            elem.onMouseEnter = wasm.make_closure(config[key])
+            script += f"_elem.onmouseover = function(e) {
+                ${__script_event_stringify}
+                Module.ccall('vortex_eval','void',['number'],[${elem.onMouseOver}]);
+            };"
+            continue;
+        }
+        if (key == "onMouseMove") {
+            elem.onMouseEnter = wasm.make_closure(config[key])
+            script += f"_elem.onmousemove = function(e) {
+                ${__script_event_stringify}
+                Module.ccall('vortex_eval','void',['number'],[${elem.onMouseMove}]);
             };"
             continue;
         }
@@ -209,7 +263,8 @@ type element = (config = {}, parent = None) => {
                         wasm.delete_closure(this.onClick)
                     }
                     this.onClick = wasm.make_closure(data[key])
-                    script += f"_elem.onclick = function() {
+                    script += f"_elem.onclick = function(e) {
+                        ${__script_event_stringify}
                         Module.ccall('vortex_eval','void',['number'],[${this.onClick}]);
                     };"
                     continue;
@@ -222,7 +277,8 @@ type element = (config = {}, parent = None) => {
                         wasm.delete_closure(this.onInput)
                     }
                     this.onInput = wasm.make_closure(data[key])
-                    script += f"_elem.oninput = function() {
+                    script += f"_elem.oninput = function(e) {
+                        ${__script_event_stringify}
                         Module.ccall('vortex_eval','void',['number'],[${this.onInput}]);
                     };"
                     continue;
@@ -235,7 +291,8 @@ type element = (config = {}, parent = None) => {
                         wasm.delete_closure(this.onChange)
                     }
                     this.onChange = wasm.make_closure(data[key])
-                    script += f"_elem.onchange = function() {
+                    script += f"_elem.onchange = function(e) {
+                        ${__script_event_stringify}
                         Module.ccall('vortex_eval','void',['number'],[${this.onChange}]);
                     };"
                     continue;
@@ -248,8 +305,65 @@ type element = (config = {}, parent = None) => {
                         wasm.delete_closure(this.onBlur)
                     }
                     this.onBlur = wasm.make_closure(data[key])
-                    script += f"_elem.onblur = function() {
+                    script += f"_elem.onblur = function(e) {
+                        ${__script_event_stringify}
                         Module.ccall('vortex_eval','void',['number'],[${this.onBlur}]);
+                    };"
+                    continue;
+                }
+                if (key == "onMouseEnter") {
+                    if (!data[key]) {
+                        continue
+                    }
+                    if (this.onMouseEnter) {
+                        wasm.delete_closure(this.onMouseEnter)
+                    }
+                    this.onMouseEnter = wasm.make_closure(data[key])
+                    script += f"_elem.onmouseenter = function(e) {
+                        ${__script_event_stringify}
+                        Module.ccall('vortex_eval','void',['number'],[${this.onMouseEnter}]);
+                    };"
+                    continue;
+                }
+                if (key == "onMouseLeave") {
+                    if (!data[key]) {
+                        continue
+                    }
+                    if (this.onMouseLeave) {
+                        wasm.delete_closure(this.onMouseLeave)
+                    }
+                    this.onMouseLeave = wasm.make_closure(data[key])
+                    script += f"_elem.onmouseleave = function(e) {
+                        ${__script_event_stringify}
+                        Module.ccall('vortex_eval','void',['number'],[${this.onMouseLeave}]);
+                    };"
+                    continue;
+                }
+                if (key == "onMouseOver") {
+                    if (!data[key]) {
+                        continue
+                    }
+                    if (this.onMouseOver) {
+                        wasm.delete_closure(this.onMouseOver)
+                    }
+                    this.onMouseOver = wasm.make_closure(data[key])
+                    script += f"_elem.onmouseover = function(e) {
+                        ${__script_event_stringify}
+                        Module.ccall('vortex_eval','void',['number'],[${this.onMouseOver}]);
+                    };"
+                    continue;
+                }
+                if (key == "onMouseMove") {
+                    if (!data[key]) {
+                        continue
+                    }
+                    if (this.onMouseMove) {
+                        wasm.delete_closure(this.onMouseMove)
+                    }
+                    this.onMouseMove = wasm.make_closure(data[key])
+                    script += f"_elem.onmousemove = function(e) {
+                        ${__script_event_stringify}
+                        Module.ccall('vortex_eval','void',['number'],[${this.onMouseMove}]);
                     };"
                     continue;
                 }
@@ -339,6 +453,11 @@ const value = (element) => {
 const text = (element) => {
     return wasm.run_script_string(f"document.getElementById(`${element.id}`).innerText")
 }
+
+const event = () => {
+    return json.parse(wasm.run_script_string(f"globalThis._event;"))
+}
+
 
 const attribute = (element, attr) => {
     return wasm.run_script_string(f"document.getElementById(`${element.id}`).${attr}")
@@ -600,6 +719,7 @@ const verifyHTML = (elements) => {
 }
 
 const alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 const extractProperties = (elem) => {
     if (!elem.is_start) {
@@ -796,7 +916,7 @@ const extractProperties = (elem) => {
             }
         }
 
-        else if (alpha.contains(elem_type[index])) {
+        else if (alpha.contains(elem_type[index]) or elem_type[index] == "_") {
             var prop_name = ""
             var prop_value = ""
             while (elem_type[index] != ":") {
@@ -921,7 +1041,14 @@ const parseContent = (content, data = {}) => {
     }
 }
 
-const createElement = (html, data = {}, methods = {}) => {
+const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, components = {}) => {
+
+    methods = methods(data)
+
+    data.props = custom
+
+    wasm.run_script("globalThis._event;")
+
     const tags = parseHTML(html)
     verifyHTML(tags)
 
@@ -962,6 +1089,13 @@ const createElement = (html, data = {}, methods = {}) => {
             }
 
             var e = element(config)
+
+            if (upper.contains(tag.name[0])) {
+                const comp = components[tag.name]
+                if (comp) {
+                    e = comp()
+                }
+            }
 
             if (tag.name == "style") {
                 return
@@ -1054,6 +1188,22 @@ const createElement = (html, data = {}, methods = {}) => {
                 } else if (key == "change") {
                     e.update({
                         onChange: injected_method
+                    })
+                } else if (key == "enter") {
+                    e.update({
+                        onMouseEnter: injected_method
+                    })
+                } else if (key == "leave") {
+                    e.update({
+                        onMouseLeave: injected_method
+                    })
+                } else if (key == "over") {
+                    e.update({
+                        onMouseOver: injected_method
+                    })
+                } else if (key == "move") {
+                    e.update({
+                        onMouseMove: injected_method
                     })
                 }
             })
@@ -1155,6 +1305,10 @@ const createElement = (html, data = {}, methods = {}) => {
                                 clonedElement.oninput = originalElement.oninput;
                                 clonedElement.onchange = originalElement.onchange;
                                 clonedElement.onblur = originalElement.onblur;
+                                clonedElement.onmouseenter = originalElement.onmouseenter;
+                                clonedElement.onmouseleave = originalElement.onmouseleave;
+                                clonedElement.onmouseover = originalElement.onmouseover;
+                                clonedElement.onmousemove = originalElement.onmousemove;
                                 document.getElementById('${container.id}').appendChild(clonedElement)
                             "
 
@@ -1374,5 +1528,16 @@ const createElement = (html, data = {}, methods = {}) => {
 
     // deps.info().keys.forEach((k) => println(k, ": ", deps[k]))
 
+    if (methods.init) {
+        methods.init(parent)
+    }
+
     return parent
+}
+
+const component = (html, data = {}, methods = (data) => ({}), components = {}) => {
+    return const component_create = (props = {}) => {
+        var _data = copy(data)
+        return createElement(html, _data, methods, props, components)
+    }
 }

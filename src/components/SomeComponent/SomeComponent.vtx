@@ -1,0 +1,96 @@
+import [attribute, event, component] : "../../lib/whirlwind"
+import [replaceAll] : string
+import io
+
+import [OtherComponent] : "../OtherComponent/OtherComponent"
+
+var template = io.readf("template.html")
+
+const data = {
+    age: 45,
+    name: "John",
+    show: true,
+    nums: [1, 2, 3, 4, 5],
+    address: {
+        street: "123 Baker st."
+    },
+    mousePos: {
+        x: 0,
+        y: 0
+    }
+}
+
+const methods = (data) => ({
+    init: (parent) => {
+        parent.update({
+            style: {
+                backgroundColor: data.props.favColor
+            }
+        })
+        parent.loader.update({
+            src: data.props.img
+        })
+    },
+    incr: () => {
+        data.age += 1
+    },
+    decr: () => {
+        data.age -= 1
+    },
+    changeName: () => {
+        if (data.name == "John") {
+            data.name = "Allan"
+        } else {
+            data.name = "John"
+        }
+    },
+    updateName: (parent) => {
+        data.name = event().target.value
+    },
+    updateAge: (parent) => {
+        data.age = event().target.value.number()
+    },
+    toggleLoader: (parent) => {
+        parent.toggleLoader.update({
+            innerText: parent.toggleLoader.attribute("innerText") == "Show" and "Hide" or "Show"
+        })
+        data.show = !data.show
+    },
+    changeAddress: () => {
+        println(event())
+        data.address = {
+            street: "455 Bloop St."
+        }
+    },
+    sayHi: (parent) => {
+        println("Hi")
+        println(event())
+        parent.loader.update({
+            style: {
+                width: string(parent.loader.attribute("style.width").replaceAll("px", "").number() * 2) + "px",
+                height: string(parent.loader.attribute("style.height").replaceAll("px", "").number() * 2) + "px"
+            }
+        })
+    },
+    sayBye: (parent) => {
+        println("Bye")
+        println(event())
+        parent.loader.update({
+            style: {
+                width: string(parent.loader.attribute("style.width").replaceAll("px", "").number() / 2) + "px",
+                height: string(parent.loader.attribute("style.height").replaceAll("px", "").number() / 2) + "px",
+            }
+        })
+    },
+    printStuff: (parent) => {
+        var e = event()
+        data.mousePos.x = e.x
+        data.mousePos.y = e.y
+    }
+})
+
+const components = {
+    OtherComponent: OtherComponent
+}
+
+const SomeComponent = component(template, data, methods, components)

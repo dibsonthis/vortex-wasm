@@ -1,8 +1,227 @@
-import wasm
+import [attribute, event, component] : "../../lib/whirlwind"
+import [replaceAll] : string
+import io
+
+var template = io.readf("template.html")
+
+const data = {
+    title: "Hi there",
+    age: 18,
+    name: "Jason",
+}
+
+const OtherComponent = component(template, data)<div>
+    <h1> {{ title }}</h1>
+    <b> Hi, my name is {{ name }} and I am {{ age }} years old.</b>
+</div>import [attribute, event, component] : "../../lib/whirlwind"
+import [replaceAll] : string
+import io
+
+import [OtherComponent] : "../OtherComponent/OtherComponent"
+
+var template = io.readf("template.html")
+
+const data = {
+    age: 45,
+    name: "John",
+    show: true,
+    nums: [1, 2, 3, 4, 5],
+    address: {
+        street: "123 Baker st."
+    },
+    mousePos: {
+        x: 0,
+        y: 0
+    }
+}
+
+const methods = (data) => ({
+    init: (parent) => {
+        parent.update({
+            style: {
+                backgroundColor: data.props.favColor
+            }
+        })
+        parent.loader.update({
+            src: data.props.img
+        })
+    },
+    incr: () => {
+        data.age += 1
+    },
+    decr: () => {
+        data.age -= 1
+    },
+    changeName: () => {
+        if (data.name == "John") {
+            data.name = "Allan"
+        } else {
+            data.name = "John"
+        }
+    },
+    updateName: (parent) => {
+        data.name = event().target.value
+    },
+    updateAge: (parent) => {
+        data.age = event().target.value.number()
+    },
+    toggleLoader: (parent) => {
+        parent.toggleLoader.update({
+            innerText: parent.toggleLoader.attribute("innerText") == "Show" and "Hide" or "Show"
+        })
+        data.show = !data.show
+    },
+    changeAddress: () => {
+        println(event())
+        data.address = {
+            street: "455 Bloop St."
+        }
+    },
+    sayHi: (parent) => {
+        println("Hi")
+        println(event())
+        parent.loader.update({
+            style: {
+                width: string(parent.loader.attribute("style.width").replaceAll("px", "").number() * 2) + "px",
+                height: string(parent.loader.attribute("style.height").replaceAll("px", "").number() * 2) + "px"
+            }
+        })
+    },
+    sayBye: (parent) => {
+        println("Bye")
+        println(event())
+        parent.loader.update({
+            style: {
+                width: string(parent.loader.attribute("style.width").replaceAll("px", "").number() / 2) + "px",
+                height: string(parent.loader.attribute("style.height").replaceAll("px", "").number() / 2) + "px",
+            }
+        })
+    },
+    printStuff: (parent) => {
+        var e = event()
+        data.mousePos.x = e.x
+        data.mousePos.y = e.y
+    }
+})
+
+const components = {
+    OtherComponent: OtherComponent
+}
+
+const SomeComponent = component(template, data, methods, components)<style>
+    .btn {
+        padding: 10px;
+        margin: 5px;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+
+        transition: all 0.3s ease-in-out;
+        &:hover {
+            background-color: #3E95FF !important;
+        }
+    }
+</style>
+
+<div>
+    <img
+        %if: show
+        #loader 
+        src: "src/resources/cat.jpg" 
+        $width: 100px 
+        $height: 100px
+        $position: relative
+        @enter: sayHi
+        @leave: sayBye
+        @move: printStuff
+    />
+    <label $fontSize: 20px>
+        <span>Name:</span>
+    </label>
+    <input 
+        #nameInput
+        @input: updateName
+        $margin: 5px
+    />
+    <input 
+        #ageInput
+        @input: updateAge
+        _type: range 
+        min:"0" 
+        max:"200" 
+        value:"50"
+        $width: 200px />
+    <p $fontWeight: bold> Hi, my name is "{{ name }}", my age is {{ age }} - I live at {{ address.street }}. Fav color is {{ props.favColor }} </p>
+    <p>{{ age * 3.56 }}</p>
+    <p>{{ age / 3.56 }}</p>
+    <p>{ {{ mousePos.x }}, {{ mousePos.y }} }</p>
+    <button 
+        #incrButton 
+        @click: incr
+        $backgroundColor: green
+        className: btn
+    > 
+        Increase
+    </button>
+    <button 
+        #decrButton 
+        @click: decr 
+        $backgroundColor: red
+        className: btn
+    > 
+        Decrease 
+    </button>
+    <button 
+        #changeName 
+        @click: changeName
+        $backgroundColor: orange
+        className: btn
+    > 
+        Change name 
+    </button>
+    <button 
+        #toggleLoader
+        @click: toggleLoader
+        $backgroundColor: gray
+        className: btn
+    > 
+        Hide 
+    </button>
+    <OtherComponent />
+    <OtherComponent />
+    <button 
+        #changeAddress
+        @click: changeAddress
+        $backgroundColor: "rgb(100, 200, 100)"
+        className: btn
+    > 
+        Change address
+    </button>
+</div>import wasm
 import math
+import json
 import random
 import [forEach] : functional
 import [substring, trim, split, replaceAll, contains, startsWith] : string
+
+const __script_event_stringify = "globalThis._event = JSON.stringify({
+    type: e.type,
+    clientX: e.clientX,
+    clientY: e.clientY,
+    ctrlKey: e.ctrlKey,
+    altKey: e.altKey,
+    shiftKey: e.shiftKey,
+    x: e.x,
+    y: e.y,
+    fromElement: {
+        id: e?.fromElement?.id
+    },
+    target: {
+        value: e.target?.value
+    }
+});"
 
 const get_property = (obj, prop) => {
     var _prop = prop.split(".")
@@ -99,29 +318,65 @@ type element = (config = {}, parent = None) => {
         }
         if (key == "onClick") {
             elem.onClick = wasm.make_closure(config[key])
-            script += f"_elem.onclick = function() {
+            script += f"_elem.onclick = function(e) {
+                ${__script_event_stringify}
                 Module.ccall('vortex_eval','void',['number'],[${elem.onClick}]);
             };"
             continue;
         }
         if (key == "onInput") {
             elem.onInput = wasm.make_closure(config[key])
-            script += f"_elem.oninput = function() {
+            script += f"_elem.oninput = function(e) {
+                ${__script_event_stringify}
                 Module.ccall('vortex_eval','void',['number'],[${elem.onInput}]);
             };"
             continue;
         }
         if (key == "onChange") {
             elem.onChange = wasm.make_closure(config[key])
-            script += f"_elem.onchange = function() {
+            script += f"_elem.onchange = function(e) {
+                ${__script_event_stringify}
                 Module.ccall('vortex_eval','void',['number'],[${elem.onChange}]);
             };"
             continue;
         }
         if (key == "onBlur") {
             elem.onBlur = wasm.make_closure(config[key])
-            script += f"_elem.onblur = function() {
+            script += f"_elem.onblur = function(e) {
+                ${__script_event_stringify}
                 Module.ccall('vortex_eval','void',['number'],[${elem.onBlur}]);
+            };"
+            continue;
+        }
+        if (key == "onMouseEnter") {
+            elem.onMouseEnter = wasm.make_closure(config[key])
+            script += f"_elem.onmouseenter = function(e) {
+                ${__script_event_stringify}
+                Module.ccall('vortex_eval','void',['number'],[${elem.onMouseEnter}]);
+            };"
+            continue;
+        }
+        if (key == "onMouseLeave") {
+            elem.onMouseEnter = wasm.make_closure(config[key])
+            script += f"_elem.onmouseleave = function(e) {
+                ${__script_event_stringify}
+                Module.ccall('vortex_eval','void',['number'],[${elem.onMouseLeave}]);
+            };"
+            continue;
+        }
+        if (key == "onMouseOver") {
+            elem.onMouseEnter = wasm.make_closure(config[key])
+            script += f"_elem.onmouseover = function(e) {
+                ${__script_event_stringify}
+                Module.ccall('vortex_eval','void',['number'],[${elem.onMouseOver}]);
+            };"
+            continue;
+        }
+        if (key == "onMouseMove") {
+            elem.onMouseEnter = wasm.make_closure(config[key])
+            script += f"_elem.onmousemove = function(e) {
+                ${__script_event_stringify}
+                Module.ccall('vortex_eval','void',['number'],[${elem.onMouseMove}]);
             };"
             continue;
         }
@@ -209,7 +464,8 @@ type element = (config = {}, parent = None) => {
                         wasm.delete_closure(this.onClick)
                     }
                     this.onClick = wasm.make_closure(data[key])
-                    script += f"_elem.onclick = function() {
+                    script += f"_elem.onclick = function(e) {
+                        ${__script_event_stringify}
                         Module.ccall('vortex_eval','void',['number'],[${this.onClick}]);
                     };"
                     continue;
@@ -222,7 +478,8 @@ type element = (config = {}, parent = None) => {
                         wasm.delete_closure(this.onInput)
                     }
                     this.onInput = wasm.make_closure(data[key])
-                    script += f"_elem.oninput = function() {
+                    script += f"_elem.oninput = function(e) {
+                        ${__script_event_stringify}
                         Module.ccall('vortex_eval','void',['number'],[${this.onInput}]);
                     };"
                     continue;
@@ -235,7 +492,8 @@ type element = (config = {}, parent = None) => {
                         wasm.delete_closure(this.onChange)
                     }
                     this.onChange = wasm.make_closure(data[key])
-                    script += f"_elem.onchange = function() {
+                    script += f"_elem.onchange = function(e) {
+                        ${__script_event_stringify}
                         Module.ccall('vortex_eval','void',['number'],[${this.onChange}]);
                     };"
                     continue;
@@ -248,8 +506,65 @@ type element = (config = {}, parent = None) => {
                         wasm.delete_closure(this.onBlur)
                     }
                     this.onBlur = wasm.make_closure(data[key])
-                    script += f"_elem.onblur = function() {
+                    script += f"_elem.onblur = function(e) {
+                        ${__script_event_stringify}
                         Module.ccall('vortex_eval','void',['number'],[${this.onBlur}]);
+                    };"
+                    continue;
+                }
+                if (key == "onMouseEnter") {
+                    if (!data[key]) {
+                        continue
+                    }
+                    if (this.onMouseEnter) {
+                        wasm.delete_closure(this.onMouseEnter)
+                    }
+                    this.onMouseEnter = wasm.make_closure(data[key])
+                    script += f"_elem.onmouseenter = function(e) {
+                        ${__script_event_stringify}
+                        Module.ccall('vortex_eval','void',['number'],[${this.onMouseEnter}]);
+                    };"
+                    continue;
+                }
+                if (key == "onMouseLeave") {
+                    if (!data[key]) {
+                        continue
+                    }
+                    if (this.onMouseLeave) {
+                        wasm.delete_closure(this.onMouseLeave)
+                    }
+                    this.onMouseLeave = wasm.make_closure(data[key])
+                    script += f"_elem.onmouseleave = function(e) {
+                        ${__script_event_stringify}
+                        Module.ccall('vortex_eval','void',['number'],[${this.onMouseLeave}]);
+                    };"
+                    continue;
+                }
+                if (key == "onMouseOver") {
+                    if (!data[key]) {
+                        continue
+                    }
+                    if (this.onMouseOver) {
+                        wasm.delete_closure(this.onMouseOver)
+                    }
+                    this.onMouseOver = wasm.make_closure(data[key])
+                    script += f"_elem.onmouseover = function(e) {
+                        ${__script_event_stringify}
+                        Module.ccall('vortex_eval','void',['number'],[${this.onMouseOver}]);
+                    };"
+                    continue;
+                }
+                if (key == "onMouseMove") {
+                    if (!data[key]) {
+                        continue
+                    }
+                    if (this.onMouseMove) {
+                        wasm.delete_closure(this.onMouseMove)
+                    }
+                    this.onMouseMove = wasm.make_closure(data[key])
+                    script += f"_elem.onmousemove = function(e) {
+                        ${__script_event_stringify}
+                        Module.ccall('vortex_eval','void',['number'],[${this.onMouseMove}]);
                     };"
                     continue;
                 }
@@ -339,6 +654,11 @@ const value = (element) => {
 const text = (element) => {
     return wasm.run_script_string(f"document.getElementById(`${element.id}`).innerText")
 }
+
+const event = () => {
+    return json.parse(wasm.run_script_string(f"globalThis._event;"))
+}
+
 
 const attribute = (element, attr) => {
     return wasm.run_script_string(f"document.getElementById(`${element.id}`).${attr}")
@@ -600,6 +920,7 @@ const verifyHTML = (elements) => {
 }
 
 const alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 const extractProperties = (elem) => {
     if (!elem.is_start) {
@@ -796,7 +1117,7 @@ const extractProperties = (elem) => {
             }
         }
 
-        else if (alpha.contains(elem_type[index])) {
+        else if (alpha.contains(elem_type[index]) or elem_type[index] == "_") {
             var prop_name = ""
             var prop_value = ""
             while (elem_type[index] != ":") {
@@ -921,7 +1242,14 @@ const parseContent = (content, data = {}) => {
     }
 }
 
-const createElement = (html, data = {}, methods = {}) => {
+const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, components = {}) => {
+
+    methods = methods(data)
+
+    data.props = custom
+
+    wasm.run_script("globalThis._event;")
+
     const tags = parseHTML(html)
     verifyHTML(tags)
 
@@ -962,6 +1290,13 @@ const createElement = (html, data = {}, methods = {}) => {
             }
 
             var e = element(config)
+
+            if (upper.contains(tag.name[0])) {
+                const comp = components[tag.name]
+                if (comp) {
+                    e = comp()
+                }
+            }
 
             if (tag.name == "style") {
                 return
@@ -1054,6 +1389,22 @@ const createElement = (html, data = {}, methods = {}) => {
                 } else if (key == "change") {
                     e.update({
                         onChange: injected_method
+                    })
+                } else if (key == "enter") {
+                    e.update({
+                        onMouseEnter: injected_method
+                    })
+                } else if (key == "leave") {
+                    e.update({
+                        onMouseLeave: injected_method
+                    })
+                } else if (key == "over") {
+                    e.update({
+                        onMouseOver: injected_method
+                    })
+                } else if (key == "move") {
+                    e.update({
+                        onMouseMove: injected_method
                     })
                 }
             })
@@ -1155,6 +1506,10 @@ const createElement = (html, data = {}, methods = {}) => {
                                 clonedElement.oninput = originalElement.oninput;
                                 clonedElement.onchange = originalElement.onchange;
                                 clonedElement.onblur = originalElement.onblur;
+                                clonedElement.onmouseenter = originalElement.onmouseenter;
+                                clonedElement.onmouseleave = originalElement.onmouseleave;
+                                clonedElement.onmouseover = originalElement.onmouseover;
+                                clonedElement.onmousemove = originalElement.onmousemove;
                                 document.getElementById('${container.id}').appendChild(clonedElement)
                             "
 
@@ -1374,87 +1729,24 @@ const createElement = (html, data = {}, methods = {}) => {
 
     // deps.info().keys.forEach((k) => println(k, ": ", deps[k]))
 
-    return parent
-}import [
-    ref,
-    appendOnChange,
-    element,
-    reactive,
-    react,
-    fetch, 
-    createCSSClass, 
-    addCSSClass, 
-    removeCSSClass, 
-    scrollToTop,
-    value, 
-    click,
-    input,
-    div,
-    span,
-    button,
-    img,
-    p,
-    label,
-    parseHTML,
-    verifyHTML,
-    createElement,
-    parseContent,
-    text,
-    attribute
-] : "components/whirlwind"
-
-import [chars, split, join, contains, lower, upper, replaceAll] : string
-import [forEach, map, filter] : functional
-import json
-import wasm
-import os
-import io
-
-var template = io.readf("template.html")
-
-var data = {
-    age: 45,
-    name: "John",
-    show: true,
-    nums: [1, 2, 3, 4, 5],
-    address: {
-        street: "123 Baker st."
+    if (methods.init) {
+        methods.init(parent)
     }
+
+    return parent
 }
 
-const methods = {
-    incr: () => {
-        data.age += 1
-    },
-    decr: () => {
-        data.age -= 1
-    },
-    changeName: () => {
-        if (data.name == "John") {
-            data.name = "Allan"
-        } else {
-            data.name = "John"
-        }
-    },
-    updateName: (parent) => {
-        data.name = parent.nameInput.value()
-    },
-    toggleLoader: (parent) => {
-        parent.toggleLoader.update({
-            innerText: parent.toggleLoader.attribute("innerText") == "Show" and "Hide" or "Show"
-        })
-        data.show = !data.show
-    },
-    changeAddress: () => {
-        data.address = {
-            street: "455 Bloop St."
-        }
-    },
-}
+const component = (html, data = {}, methods = (data) => ({}), components = {}) => {
+    return const component_create = (props = {}) => {
+        var _data = copy(data)
+        return createElement(html, _data, methods, props, components)
+    }
+}import [SomeComponent] : "components/SomeComponent/SomeComponent"
 
-const parent = createElement(template, data, methods)
-
-println("Done")
+SomeComponent({
+    favColor: "lightblue",
+    img: "src/resources/cat.jpg"
+})
 
 // var breed_data = {}
 // var prev_market_price = 0
@@ -2289,79 +2581,4 @@ y‘™¹‘É9Š¢@‘XèY’Y™’ÿ(I…£ ’J&9“ü8*y“ñè-é’› “E(“4”8Y”òÈ’;‰„à“
 ¿å/ók½wk¿ß»1ù«¿•Ë¿ë[4ÿkéK¾÷Û,lÀİ+ÀÅJ½\«¡	Œ+,ÁSKÁ<*ŒÁ}«Áı«.á{ìñ+Â#l%Ü'<.ìÁÑ+-¬À)¬Â,Ãì&ç++lÂ9\&/ÌÀãK3¬*A,Ä<EÌÁ5LÂ7¬Ä?Œ#GŒÄ\Qü"SÃ×kK|(Mì»OLÄ!\)âš=WÜ!eŒgŒÆü+kÌÆa,ÆÇÊmìÆÜZ-šŠÇslÅ{LÃsÚy¬ÇlÊ-wìÇC¬l,‰¼…ŒÃ_ŠÈƒLÈÌÅş‡ÌÇfú‘lÈEêÂL
 ìÉ+
 Ê?*Ê—|“LÉ§ÌÉ©ŒÉŸÌÊ%£,ÉŠ¿³LË¯¬Ê¥ŒË*µlË÷ù/:Á,ÌÙi0şIÇŒÌ©I1áYÍLÊ˜)2ÂiÓLÍt	3¡yÙ¬ÍPé¼}‰ßÎÚ	Á~éÍ»ì\é6ÿ©åLÇ
-»tÚñË9}3pÏú,üÜÏpğÏ í=ĞlPĞ­Ğh°ĞmıĞdÑ=ë\ÑvpÑM½Ñş¼ÈÍ Ò"]Å$]Ò|Ò}Ò*ÒûÛÒ°Å0½Ò<Ó€PÓ6ÓÅ›Ó‚°¼<=\ú3ÓŒP£B-	)ZÔ”PH½ÔLİÔNıÔPÕR=ÕT]ÕV}ÕXÕZ½Õ\İÕ^ıÕ`Íd  ;<style>
-    .btn {
-        padding: 10px;
-        margin: 5px;
-        color: white;
-        border-radius: 10px;
-        border: none;
-        font-size: 14px;
-        cursor: pointer;
-
-        transition: all 0.3s ease-in-out;
-        &:hover {
-            background-color: #3E95FF !important;
-        }
-    }
-</style>
-
-<div>
-    <img
-        %if: show
-        #loader 
-        src: "src/resources/cat.jpg" 
-        $width: 100px 
-        $height: 100px
-        $position: relative
-    />
-    <label $fontSize: 20px>
-        <span>Name:</span>
-    </label>
-    <input 
-        #nameInput
-        @input: updateName
-        $margin: 5px
-    />
-    <p $fontWeight: bold> Hi, my name is {{ "_" + name + "_" }}, my age is {{ age + 2 }} - I live at {{ address.street }} </p>
-    <button 
-        #incrButton 
-        @click: incr
-        $backgroundColor: green
-        className: btn
-    > 
-        Increase
-    </button>
-    <button 
-        #decrButton 
-        @click: decr 
-        $backgroundColor: red
-        className: btn
-    > 
-        Decrease 
-    </button>
-    <button 
-        #changeName 
-        @click: changeName
-        $backgroundColor: orange
-        className: btn
-    > 
-        Change name 
-    </button>
-    <button 
-        #toggleLoader
-        @click: toggleLoader
-        $backgroundColor: gray
-        className: btn
-    > 
-        Hide 
-    </button>
-    <button 
-        #changeAddress
-        @click: changeAddress
-        $backgroundColor: yellow
-        className: btn
-    > 
-        Change addy 
-    </button>
-</div>
+»tÚñË9}3pÏú,üÜÏpğÏ í=ĞlPĞ­Ğh°ĞmıĞdÑ=ë\ÑvpÑM½Ñş¼ÈÍ Ò"]Å$]Ò|Ò}Ò*ÒûÛÒ°Å0½Ò<Ó€PÓ6ÓÅ›Ó‚°¼<=\ú3ÓŒP£B-	)ZÔ”PH½ÔLİÔNıÔPÕR=ÕT]ÕV}ÕXÕZ½Õ\İÕ^ıÕ`Íd  ;

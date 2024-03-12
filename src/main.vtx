@@ -1,83 +1,9 @@
-import [
-    ref,
-    appendOnChange,
-    element,
-    reactive,
-    react,
-    fetch, 
-    createCSSClass, 
-    addCSSClass, 
-    removeCSSClass, 
-    scrollToTop,
-    value, 
-    click,
-    input,
-    div,
-    span,
-    button,
-    img,
-    p,
-    label,
-    parseHTML,
-    verifyHTML,
-    createElement,
-    parseContent,
-    text,
-    attribute
-] : "components/whirlwind"
+import [SomeComponent] : "components/SomeComponent/SomeComponent"
 
-import [chars, split, join, contains, lower, upper, replaceAll] : string
-import [forEach, map, filter] : functional
-import json
-import wasm
-import os
-import io
-
-var template = io.readf("template.html")
-
-var data = {
-    age: 45,
-    name: "John",
-    show: true,
-    nums: [1, 2, 3, 4, 5],
-    address: {
-        street: "123 Baker st."
-    }
-}
-
-const methods = {
-    incr: () => {
-        data.age += 1
-    },
-    decr: () => {
-        data.age -= 1
-    },
-    changeName: () => {
-        if (data.name == "John") {
-            data.name = "Allan"
-        } else {
-            data.name = "John"
-        }
-    },
-    updateName: (parent) => {
-        data.name = parent.nameInput.value()
-    },
-    toggleLoader: (parent) => {
-        parent.toggleLoader.update({
-            innerText: parent.toggleLoader.attribute("innerText") == "Show" and "Hide" or "Show"
-        })
-        data.show = !data.show
-    },
-    changeAddress: () => {
-        data.address = {
-            street: "455 Bloop St."
-        }
-    },
-}
-
-const parent = createElement(template, data, methods)
-
-println("Done")
+SomeComponent({
+    favColor: "lightblue",
+    img: "src/resources/cat.jpg"
+})
 
 // var breed_data = {}
 // var prev_market_price = 0

@@ -23,6 +23,9 @@
         $width: 100px 
         $height: 100px
         $position: relative
+        @enter: sayHi
+        @leave: sayBye
+        @move: printStuff
     />
     <label $fontSize: 20px>
         <span>Name:</span>
@@ -32,7 +35,18 @@
         @input: updateName
         $margin: 5px
     />
-    <p $fontWeight: bold> Hi, my name is {{ "_" + name + "_" }}, my age is {{ age + 2 }} - I live at {{ address.street }} </p>
+    <input 
+        #ageInput
+        @input: updateAge
+        _type: range 
+        min:"0" 
+        max:"200" 
+        value:"50"
+        $width: 200px />
+    <p $fontWeight: bold> Hi, my name is "{{ name }}", my age is {{ age }} - I live at {{ address.street }}. Fav color is {{ props.favColor }} </p>
+    <p>{{ age * 3.56 }}</p>
+    <p>{{ age / 3.56 }}</p>
+    <p>{ {{ mousePos.x }}, {{ mousePos.y }} }</p>
     <button 
         #incrButton 
         @click: incr
@@ -65,12 +79,13 @@
     > 
         Hide 
     </button>
+    <OtherComponent />
     <button 
         #changeAddress
         @click: changeAddress
-        $backgroundColor: yellow
+        $backgroundColor: "rgb(100, 200, 100)"
         className: btn
     > 
-        Change addy 
+        Change address
     </button>
 </div>

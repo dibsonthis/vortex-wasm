@@ -1,0 +1,13 @@
+import [attribute, event, component] : "../../lib/whirlwind"
+import [replaceAll] : string
+import io
+
+var template = io.readf("template.html")
+
+const data = {
+    title: "Hi there",
+    age: 18,
+    name: "Jason",
+}
+
+const OtherComponent = component(template, data)

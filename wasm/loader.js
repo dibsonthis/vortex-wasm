@@ -106,6 +106,9 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
       }
 Module['FS_createPath']("/", "src", true, true);
 Module['FS_createPath']("/src", "components", true, true);
+Module['FS_createPath']("/src/components", "OtherComponent", true, true);
+Module['FS_createPath']("/src/components", "SomeComponent", true, true);
+Module['FS_createPath']("/src", "lib", true, true);
 Module['FS_createPath']("/src", "resources", true, true);
 
       /** @constructor */
@@ -174,6 +177,6 @@ Module['FS_createPath']("/src", "resources", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/src/components/whirlwind.vtx", "start": 0, "end": 47687}, {"filename": "/src/main.vtx", "start": 47687, "end": 55960}, {"filename": "/src/resources/cat.jpg", "start": 55960, "end": 108978}, {"filename": "/src/resources/loader.gif", "start": 108978, "end": 181169}, {"filename": "/src/template.html", "start": 181169, "end": 182720}], "remote_package_size": 182720});
+    loadPackage({"files": [{"filename": "/src/components/OtherComponent/OtherComponent.vtx", "start": 0, "end": 264}, {"filename": "/src/components/OtherComponent/template.html", "start": 264, "end": 370}, {"filename": "/src/components/SomeComponent/SomeComponent.vtx", "start": 370, "end": 2801}, {"filename": "/src/components/SomeComponent/template.html", "start": 2801, "end": 4770}, {"filename": "/src/lib/whirlwind.vtx", "start": 4770, "end": 58796}, {"filename": "/src/main.vtx", "start": 58796, "end": 65748}, {"filename": "/src/resources/cat.jpg", "start": 65748, "end": 118766}, {"filename": "/src/resources/loader.gif", "start": 118766, "end": 190957}], "remote_package_size": 190957});
 
   })();
