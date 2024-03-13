@@ -34,6 +34,13 @@ const template = `
     </div>
     <p> Hi, my name is "{{ name }}" and I am {{ age }} years old. </p>
     <p> My favorite color is {{ props.color }}. </p>
+    <p> My favorite books are: </p>
+    <ul>
+        <li %for: "books, book" $listStyleType: none>
+        <p> {{ book.title }} - {{ book.author }} </p>
+        </li>
+    </ul>
+    <button @click: changeNums> Change Nums </button>
 </div>
 `
 
@@ -41,6 +48,14 @@ const data = {
     title: "Hi there",
     age: 18,
     name: "Jason",
+    nums: [1, 2, 3, 4],
+    books: [{
+        author: "James Whitman",
+        title: "The Anaconda Touch"
+    }, {
+        author: "Bradley Eric",
+        title: "Forsaken Rights"
+    }]
 }
 
 const methods = (data) => ({
@@ -50,6 +65,9 @@ const methods = (data) => ({
             value: ""
         })
     },
+    changeNums: () => {
+        data.nums.append(data.nums[data.nums.length()-1] + 1)
+    }
 })
 
 const OtherComponent = component(template, data, methods)

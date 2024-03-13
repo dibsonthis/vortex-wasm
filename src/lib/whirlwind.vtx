@@ -2,7 +2,7 @@ import wasm
 import math
 import json
 import random
-import [forEach] : functional
+import [forEach, map] : functional
 import [substring, trim, split, replaceAll, contains, startsWith] : string
 
 const __script_event_stringify = "globalThis._event = JSON.stringify({
@@ -245,6 +245,13 @@ type element = (config = {}, parent = None) => {
     return {
         ...elem,
         update: (data) => {
+
+            // See if this element exists in the DOM
+            var exists = wasm.run_script_number(f`document.getElementById('${this.id}') !== null`)
+            if (exists == 0) {
+                return;
+            }
+
             if (data.type() != "Object") {
                 return;
             }
@@ -1007,6 +1014,14 @@ const with_hook = (data, hook, name = "data") => {
 }
 
 const parseContent = (content, data = {}) => {
+
+    if (!content) {
+        return {
+            variables: [],
+            content: ""
+        }
+    }
+
     var index = 0
     var variables = []
     var substrings = []
@@ -1055,16 +1070,64 @@ const parseContent = (content, data = {}) => {
     }
 }
 
+const new_element = (tag, data, dep, config, is_custom, components, props, collecting_for_children) => {
+    var dependencies = []
+    if (tag.content) {
+        const data = with_hook(data, (e) => {
+            var name = e.name
+            if (name.startsWith("data.")) {
+                name = name.replaceAll("data.", "")
+            }
+            if (dep) {
+                dep.append(name)
+            } else {
+                dep = [name]
+            }
+        })
+
+        if (!collecting_for_children) {
+            const parsed_content = tag.content.parseContent(data)
+            config.innerHTML = parsed_content.content
+            dependencies = dep and dep or []
+        }
+    }
+
+    var e;
+
+    if (is_custom) {
+        const comp = components[tag.name]
+        if (!comp) {
+            println(f"Warning: No such component '${tag.name}'" )
+        }
+        e = comp(props.props)
+    } else {
+       e = element(config)
+    }
+
+    e._data = {...data}
+
+    return {
+        element: e,
+        dependencies: dependencies
+    }
+}
+
 const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, components = {}) => {
+
+    var looped_elements = []
 
     methods = methods(data)
 
     data.props = custom
 
-    wasm.run_script("globalThis._event;")
+    var tags;
 
-    const tags = parseHTML(html)
-    verifyHTML(tags)
+    if (html.type() == "String") {
+        tags = parseHTML(html)
+        verifyHTML(tags)
+    } else {
+        tags = html
+    }
 
     var stack = []
     var parent;
@@ -1074,7 +1137,14 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
     var deps = {}
 
+    var collecting_for_children = false
+
     tags.forEach((tag, i) => {
+
+        if (collecting_for_children) {
+            looped_elements[looped_elements.length()-1].children.append(tag)
+        }
+
         var is_custom = upper.contains(tag.name[0])
         const props = tag.extractProperties();
         const id = props.id;
@@ -1084,53 +1154,21 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             var config = {
                 type: tag.name
             }
-        
-            if (tag.content) {
-                const data = with_hook(data, (e) => {
-                    var name = e.name
-                    if (name.startsWith("data.")) {
-                        name = name.replaceAll("data.", "")
-                    }
-                    if (deps[string(i)]) {
-                        deps[string(i)].append(name)
-                    } else {
-                        deps[string(i)] = [name]
-                    }
-                })
 
-                const parsed_content = tag.content.parseContent(data)
-                config.innerHTML = parsed_content.content
-                // dependencies = parsed_content.variables
-                dependencies = deps[string(i)] and deps[string(i)] or []
-            } else {
-                // data = with_hook(data, (e) => {})
-            }
-
-            var e;
-
-            if (is_custom) {
-                const comp = components[tag.name]
-                if (!comp) {
-                    println(f"Warning: No such component '${tag.name}'" )
-                }
-                e = comp(props.props)
-            } else {
-               e = element(config)
-            }
+            var elem = new_element(tag, data, deps[string(i)], config, is_custom, components, props, collecting_for_children)
+            dependencies = elem.dependencies
+            var e = elem.element
 
             if (tag.name == "style") {
                 return
             }
 
             if (tag.name == "children") {
-                parent._children_section = e
-                // if (customElementStack.length() > 0) {
-                //     var last_stack_elem = customElementStack[customElementStack.length() - 1]
-                //     last_stack_elem._children_section = e
-                // } else {
-                //     var last_stack_elem = stack[stack.length() - 1]
-                //     last_stack_elem._children_section = e
-                // }
+                if (parent._children_section) {
+                    println("Warning - only one children section allowed")
+                } else {
+                    parent._children_section = e
+                }
             }
 
             if (stack.length() == 0) {
@@ -1168,41 +1206,22 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             var _data = data
 
-            dependencies.forEach((var) => {
-                // const v = get_property(data, var)
-                set_prop_hook(data, var, (_e) => {
-                    if (e._data) {
-                        _data = {...e._data, ...data}
-                    }
-                    const parsed_content = tag.content.parseContent(_data)
-                    e.update({
-                        innerHTML: parsed_content.content
+            // We don't want to add dependencies here if it's a "for" element
+            // Because we delete this later and won't exist in the DOM
+
+            if (!props.inner["for"]) {
+                dependencies.forEach((var) => {
+                    set_prop_hook(data, var, (_e) => {
+                        if (e._data) {
+                            _data = {...e._data, ...data}
+                        }
+                        const parsed_content = tag.content.parseContent(_data)
+                        e.update({
+                            innerHTML: parsed_content.content
+                        })
                     })
                 })
-                // const currentOnChange = data[var].info().onChangeHook
-                // if (currentOnChange) {
-                //     data[var]::onChange((_e) => {
-                //         currentOnChange(_e)
-                //         if (e._data) {
-                //             _data = {...e._data, ...data}
-                //         }
-                //         const parsed_content = tag.content.parseContent(_data)
-                //         e.update({
-                //             innerHTML: parsed_content.content
-                //         })
-                //     })
-                // } else {
-                //     data[var]::onChange((_e) => {
-                //         if (e._data) {
-                //             _data = {...e._data, ...data}
-                //         }
-                //         const parsed_content = tag.content.parseContent(_data)
-                //         e.update({
-                //             innerHTML: parsed_content.content
-                //         })
-                //     })
-                // }
-            })
+            }
 
             // If we have styles, we apply them here
             e.update({
@@ -1331,258 +1350,26 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     }
                 }
                 if (key == "for") {
-
+                    println("FOUND FOR - ", i)
+                    collecting_for_children = true
+                    e.__is_for = true
                     var value = props.inner[key]
                     if (value.trim() == "") {
                         error("Malformed for loop")
                     }
-                    var values = value.split(",")
-                    var list = values[0].trim()
+                    var values = value.split(",").map((e) => e.trim())
                     var current_parent = stack[stack.length() - 1]
 
-                    const container = element({})
-                    wasm.run_script(f"document.getElementById('${current_parent.id}').appendChild(document.getElementById('${container.id}'))")
+                    var t = tag
+                    t.type = t.type.replaceAll("%for", "%__for")
 
-                    if (values.length() == 1) {
-                        for (data[list], i, v) {
-                            var temp_data = {...data}
-                            const content = tag.content.parseContent(temp_data)
-                            var dependencies = content.variables
-                            dependencies.append(list)
-                            
-                            // We've already created the first element, so we
-                            // just need to update it
-
-                            if (i == 0) {
-                                e.update({
-                                    innerText: content.content
-                                })
-                                e._data = temp_data
-
-                                wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
-
-                                continue
-                            }
-
-                            const new_id = e.id + "_" + string(i)
-
-                            var new_element = {
-                                ...e,
-                                id: new_id,
-                                _data: temp_data
-                            }
-
-                            const script = f"
-                                const originalElement = document.getElementById('${e.id}');
-                                const clonedElement = originalElement.cloneNode(true);
-                                clonedElement.id = '${new_id}';
-                                clonedElement.innerText = '${content.content}';
-                                clonedElement.onclick = originalElement.onclick;
-                                clonedElement.oninput = originalElement.oninput;
-                                clonedElement.onchange = originalElement.onchange;
-                                clonedElement.onblur = originalElement.onblur;
-                                clonedElement.onmouseenter = originalElement.onmouseenter;
-                                clonedElement.onmouseleave = originalElement.onmouseleave;
-                                clonedElement.onmouseover = originalElement.onmouseover;
-                                clonedElement.onmousemove = originalElement.onmousemove;
-                                document.getElementById('${container.id}').appendChild(clonedElement)
-                            "
-
-                            wasm.run_script(script)
-
-                            var _data = data
-
-                            dependencies.forEach((var) => {
-                                // If it doesn't exist in data
-                                // It's a temporary, so we don't care about hooking it
-                                if (!data[var]) {
-                                    return
-                                }
-                                const currentOnChange = data[var].info().onChangeHook
-                                if (currentOnChange) {
-                                    data[var]::onChange((_e) => {
-                                        currentOnChange(_e)
-                                        if (new_element._data) {
-                                            _data = {...new_element._data, ...data}
-                                        }
-                                        const parsed_content = tag.content.parseContent(_data)
-                                        new_element.update({
-                                            innerHTML: parsed_content.content
-                                        })
-                                    })
-                                } else {
-                                    data[var]::onChange((_e) => {
-                                        if (new_element._data) {
-                                            _data = {...new_element._data, ...data}
-                                        }
-                                        const parsed_content = tag.content.parseContent(_data)
-                                        new_element.update({
-                                            innerHTML: parsed_content.content
-                                        })
-                                    })
-                                }
-                            })
-                        }
-                    } else if (values.length() == 2) {
-                        var iterator = values[1].trim()
-
-                        for (data[list], i, v) {
-                            var temp_data = {...data}
-                            temp_data[iterator] = v
-                            const content = tag.content.parseContent(temp_data)
-                            var dependencies = content.variables
-                            dependencies.append(list)
-                            
-                            // We've already created the first element, so we
-                            // just need to update it
-
-                            if (i == 0) {
-                                e.update({
-                                    innerText: content.content
-                                })
-                                e._data = temp_data
-                                wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
-                                continue
-                            }
-
-                            const new_id = e.id + "_" + string(i)
-
-                            var new_element = {
-                                ...e,
-                                id: new_id,
-                                _data: temp_data
-                            }
-
-                            const script = f"
-                                const originalElement = document.getElementById('${e.id}');
-                                const clonedElement = originalElement.cloneNode(true);
-                                clonedElement.id = '${new_id}';
-                                clonedElement.innerText = '${content.content}';
-                                clonedElement.onclick = originalElement.onclick;
-                                clonedElement.oninput = originalElement.oninput;
-                                clonedElement.onchange = originalElement.onchange;
-                                clonedElement.onblur = originalElement.onblur;
-                                document.getElementById('${container.id}').appendChild(clonedElement)
-                            "
-
-                            wasm.run_script(script)
-
-                            var _data = data
-
-                            dependencies.forEach((var) => {
-                                // If it doesn't exist in data
-                                // It's a temporary, so we don't care about hooking it
-                                if (!data[var]) {
-                                    return
-                                }
-                                const currentOnChange = data[var].info().onChangeHook
-                                if (currentOnChange) {
-                                    data[var]::onChange((_e) => {
-                                        currentOnChange(_e)
-                                        if (new_element._data) {
-                                            _data = {...new_element._data, ...data}
-                                        }
-                                        const parsed_content = tag.content.parseContent(_data)
-                                        new_element.update({
-                                            innerHTML: parsed_content.content
-                                        })
-                                    })
-                                } else {
-                                    data[var]::onChange((_e) => {
-                                        if (new_element._data) {
-                                            _data = {...new_element._data, ...data}
-                                        }
-                                        const parsed_content = tag.content.parseContent(_data)
-                                        new_element.update({
-                                            innerHTML: parsed_content.content
-                                        })
-                                    })
-                                }
-                            })
-                        }
-                    } else if (values.length() == 3) {
-
-                        var iterator = values[1].trim()
-                        var _index = values[2].trim()
-
-                        for (data[list], i, v) {
-                            var temp_data = {...data}
-                            temp_data[iterator] = v
-                            temp_data[_index] = i
-
-                            const content = tag.content.parseContent(temp_data)
-                            var dependencies = content.variables
-                            dependencies.append(list)
-                            
-                            // We've already created the first element, so we
-                            // just need to update it
-
-                            if (i == 0) {
-                                e.update({
-                                    innerText: content.content
-                                })
-                                e._data = temp_data
-                                wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
-                                continue
-                            }
-
-                            const new_id = e.id + "_" + string(i)
-
-                            var new_element = {
-                                ...e,
-                                id: new_id,
-                                _data: temp_data
-                            }
-
-                            const script = f"
-                                const originalElement = document.getElementById('${e.id}');
-                                const clonedElement = originalElement.cloneNode(true);
-                                clonedElement.id = '${new_id}';
-                                clonedElement.innerText = '${content.content}';
-                                clonedElement.onclick = originalElement.onclick;
-                                clonedElement.oninput = originalElement.oninput;
-                                clonedElement.onchange = originalElement.onchange;
-                                clonedElement.onblur = originalElement.onblur;
-                                document.getElementById('${container.id}').appendChild(clonedElement)
-                            "
-
-                            wasm.run_script(script)
-
-                            var _data = data
-
-                            dependencies.forEach((var) => {
-                                // If it doesn't exist in data
-                                // It's a temporary, so we don't care about hooking it
-                                if (!data[var]) {
-                                    return
-                                }
-                                const currentOnChange = data[var].info().onChangeHook
-                                if (currentOnChange) {
-                                    data[var]::onChange((_e) => {
-                                        currentOnChange(_e)
-                                        if (new_element._data) {
-                                            _data = {...new_element._data, ...data}
-                                        }
-                                        const parsed_content = tag.content.parseContent(_data)
-                                        new_element.update({
-                                            innerHTML: parsed_content.content
-                                        })
-                                    })
-                                } else {
-                                    data[var]::onChange((_e) => {
-                                        if (new_element._data) {
-                                            _data = {...new_element._data, ...data}
-                                        }
-                                        const parsed_content = tag.content.parseContent(_data)
-                                        new_element.update({
-                                            innerHTML: parsed_content.content
-                                        })
-                                    })
-                                }
-                            })
-                        }
-                    }
-                    
+                    looped_elements.append({
+                        element: e,
+                        tag: tag,
+                        values: values,
+                        current_parent: current_parent,
+                        children: [t]
+                    })  
                 }
             })
 
@@ -1612,6 +1399,10 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             var last_stack_elem = stack[stack.length() - 1]
             if (tag.name == last_stack_elem.type) {
+                if (last_stack_elem.__is_for) {
+                    println("POPPING FOR - ", i)
+                    collecting_for_children = false
+                }
                 stack.remove(stack.length() - 1)
             } else {
                 error("Malformed HTML")
@@ -1619,7 +1410,66 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         }
     })
 
-    // deps.info().keys.forEach((k) => println(k, ": ", deps[k]))
+    // Let's create the looped elements
+    
+    // for (looped_elements, index, elem) {
+    looped_elements.forEach((elem, index) => {
+        var dependencies = []
+        const container = elem.current_parent
+        const list = elem.values[0]
+        dependencies.append(list)
+
+        if (elem.values.length() == 2) {
+            var iterator = elem.values[1].trim()
+
+            const current_iterator_variable = data[iterator]
+
+            wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+
+            for (data[list], i, v) {
+                data[iterator] = v
+                var tags = elem.children
+                var e = createElement(tags, data, (data) => methods, custom, components)
+                wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+
+                if (current_iterator_variable) {
+                    data[iterator] = current_iterator_variable
+                } else {
+                    data.remove_prop(iterator)
+                }
+            }
+        }
+
+        const current_onchange = data[list].info().onChangeHook
+
+        data[list]::onChange((e) => {
+
+            if (current_onchange) {
+                current_onchange(e)
+            }
+
+            var iterator = elem.values[1].trim()
+
+            const current_iterator_variable = data[iterator]
+
+            wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+
+            for (data[list], i, v) {
+                data[iterator] = v
+                var tags = elem.children
+                var e = createElement(tags, data, (data) => methods, custom, components)
+                wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+
+                if (current_iterator_variable) {
+                    data[iterator] = current_iterator_variable
+                } else {
+                    data.remove_prop(iterator)
+                }
+            }
+        })
+    })
+
+    // End loops
 
     if (methods.init) {
         const arity = methods.init.info().arity
