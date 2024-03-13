@@ -241,7 +241,7 @@ const template = `
 > 
     Change address
 </button>
-<div %if: showModal className: modaldiv>
+<div %if: {{showModal}} className: {{ name }}>
     <Modal
         #modal
         title: {{ "Hello, this is " + name }} 
@@ -1200,16 +1200,20 @@ const extractProperties = (elem) => {
     var index = 0
     var id = "";
     var events = {
-        _dynamic: []
+        _dynamic: [],
+        _dynamic_raw: {},
     }
     var styles = {
-        _dynamic: []
+        _dynamic: [],
+        _dynamic_raw: {},
     }
     var props = {
-        _dynamic: []
+        _dynamic: [],
+        _dynamic_raw: {},
     }
     var inner = {
-        _dynamic: []
+        _dynamic: [],
+        _dynamic_raw: {},
     }
     const elem_type = elem.type.substring(1, elem.type.length()).trim().substring(elem.name.length(), elem.type.length())
     while (elem_type[index]) {
@@ -1680,6 +1684,8 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             dependencies = elem.dependencies
             var e = elem.element
 
+            deps[string(i)] = []
+
             if (tag.name == "style") {
                 return
             }
@@ -1747,8 +1753,19 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             // If we have styles, we apply them here
             // Let's update the values for dynamic styles first
 
+            var deps = []
+
+            var style_data = with_hook(data.copy(), (e) => {
+                var name = e.name
+                if (name.startsWith("data.")) {
+                    name = name.replaceAll("data.", "")
+                }
+                deps.append(name)
+            })
+
             for (props.styles._dynamic, index, val) {
-                props.styles[val] = eval(props.styles[val], data)
+                props.styles._dynamic_raw[val] = props.styles[val]
+                props.styles[val] = eval(props.styles[val], style_data)
             }
 
             e.update({
@@ -1839,8 +1856,22 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             // If we have props, we apply them here
 
+            deps = []
+
+            var prop_data = with_hook(data.copy(), (e) => {
+                var name = e.name
+                if (name == "data") {
+                    return
+                }
+                if (name.startsWith("data.")) {
+                    name = name.replaceAll("data.", "")
+                }
+                deps.append(name)
+            })
+
             for (props.props._dynamic, index, val) {
-                props.props[val] = eval(props.props[val], data)
+                props.props._dynamic_raw[val] = props.props[val]
+                props.props[val] = eval(props.props[val], prop_data)
             }
 
             if (props.props) {
@@ -1849,54 +1880,104 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             // If we have inner events, we apply them here
 
+            deps = []
+
+            var inner_data = with_hook(data.copy(), (e) => {
+                var name = e.name
+                if (name == "data") {
+                    return
+                }
+                if (name.startsWith("data.")) {
+                    name = name.replaceAll("data.", "")
+                }
+                deps.append(name)
+            })
+
             for (props.inner._dynamic, index, val) {
-                props.inner[val] = eval(props.inner[val], data)
+                props.inner._dynamic_raw[val] = props.inner[val]
+                props.inner[val] = eval(props.inner[val], inner_data)
             }
 
             props.inner.info().keys.forEach((key) => {
                 const value = props.inner[key]
                 if (key == "if") {
-                    const predicate = data[value]
-                    const predicateOnChange = predicate.info().onChangeHook
-                    if (!predicate) {
-                        e.update({
-                            style: {
-                                display: "none"
-                            }
-                        })
-                    }
-                    if (predicateOnChange) {
-                        data[value]::onChange((info) => {
-                            predicateOnChange(info)
-                            if (info.current) {
-                                e.update({
-                                    style: {
-                                        display: ""
-                                    }
-                                })
-                            } else {
-                                e.update({
-                                    style: {
-                                        display: "none"
-                                    }
-                                })
-                            }
-                        })
+                    if (value.type() == "String") {
+                        var predicate = data[value]
+                        const predicateOnChange = predicate.info().onChangeHook
+                        if (!predicate) {
+                            e.update({
+                                style: {
+                                    display: "none"
+                                }
+                            })
+                        }
+                        if (predicateOnChange) {
+                            data[value]::onChange((info) => {
+                                predicateOnChange(info)
+                                if (info.current) {
+                                    e.update({
+                                        style: {
+                                            display: ""
+                                        }
+                                    })
+                                } else {
+                                    e.update({
+                                        style: {
+                                            display: "none"
+                                        }
+                                    })
+                                }
+                            })
+                        } else {
+                            data[value]::onChange((info) => {
+                                if (info.current) {
+                                    e.update({
+                                        style: {
+                                            display: ""
+                                        }
+                                    })
+                                } else {
+                                    e.update({
+                                        style: {
+                                            display: "none"
+                                        }
+                                    })
+                                }
+                            })
+                        }
                     } else {
-                        data[value]::onChange((info) => {
-                            if (info.current) {
-                                e.update({
-                                    style: {
-                                        display: ""
-                                    }
-                                })
-                            } else {
-                                e.update({
-                                    style: {
-                                        display: "none"
-                                    }
-                                })
-                            }
+                        if (!value) {
+                            e.update({
+                                style: {
+                                    display: "none"
+                                }
+                            })
+                        }
+                        // for (deps, dep_index, dep_val) {
+                        deps.forEach((dep_val, dep_index) => {
+                            set_prop_hook(data, dep_val, (info) => {
+                                if (e._data) {
+                                    _data = {...e._data, ...inner_data}
+                                }
+
+                                _data[dep_val] = info.current
+
+                                var res = eval(props.inner._dynamic_raw[key], _data)
+                                
+                                if (res) {
+                                    e.update({
+                                        style: {
+                                            display: ""
+                                        }
+                                    })
+                                } else {
+                                    e.update({
+                                        style: {
+                                            display: "none"
+                                        }
+                                    })
+                                }
+                            })
                         })
                     }
                 }

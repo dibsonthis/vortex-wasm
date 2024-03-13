@@ -107,7 +107,7 @@ const template = `
 > 
     Change address
 </button>
-<div %if: showModal className: modaldiv>
+<div %if: {{showModal}} className: {{ name }}>
     <Modal
         #modal
         title: {{ "Hello, this is " + name }} 
