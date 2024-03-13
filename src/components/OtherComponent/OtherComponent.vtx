@@ -40,7 +40,13 @@ const template = `
         <p> {{ book.title }} - {{ book.author }} </p>
         </li>
     </ul>
-    <button @click: changeNums> Change Nums </button>
+    <ul>
+        <li %for: {{"nums, num"}} $listStyleType: none>
+        <p> {{ num }} </p>
+        </li>
+    </ul>
+    <button @click: {{ nums.append(10) }} className: {{ "btn" }} $backgroundColor: {{ props.color }}> Add Num </button>
+    <button @click: removeNum className: btn $backgroundColor: red> Remove Num </button>
 </div>
 `
 
@@ -55,7 +61,8 @@ const data = {
     }, {
         author: "Bradley Eric",
         title: "Forsaken Rights"
-    }]
+    }],
+    addNumColor: "green"
 }
 
 const methods = (data) => ({
@@ -65,8 +72,15 @@ const methods = (data) => ({
             value: ""
         })
     },
-    changeNums: () => {
+    addNum: () => {
+        if (data.nums.length() == 0) {
+            data.nums.append(1)
+            return
+        }
         data.nums.append(data.nums[data.nums.length()-1] + 1)
+    },
+    removeNum: () => {
+        data.nums.remove(data.nums.length()-1)
     }
 })
 

@@ -1,6 +1,5 @@
 import [attribute, event, component] : "../../lib/whirlwind"
 import [replaceAll] : string
-import io
 
 import [OtherComponent] : "../OtherComponent/OtherComponent"
 import [Modal] : "../Modal/Modal"
@@ -91,7 +90,7 @@ const template = `
 > 
     Hide 
 </button>
-<OtherComponent color: red />
+<OtherComponent color: black />
 <button 
     #showModal
     @click: onShowModal
@@ -108,11 +107,10 @@ const template = `
 > 
     Change address
 </button>
-<!- <Modal #modal title: "Hello"  content: "This is the content"  variant: success $display: none /> ->
 <div %if: showModal className: modaldiv>
     <Modal
         #modal
-        title: "Hello" 
+        title: {{ "Hello, this is " + name }} 
         content: "This is the content" 
         variant: success
         @customCloseEvent: onCloseModal

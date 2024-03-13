@@ -178,6 +178,6 @@ Module['FS_createPath']("/src", "resources", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/src/components/Modal/Modal.vtx", "start": 0, "end": 1121}, {"filename": "/src/components/OtherComponent/OtherComponent.vtx", "start": 1121, "end": 2764}, {"filename": "/src/components/SomeComponent/SomeComponent.vtx", "start": 2764, "end": 7797}, {"filename": "/src/components/SomeComponent/template.html", "start": 7797, "end": 9754}, {"filename": "/src/lib/whirlwind.vtx", "start": 9754, "end": 57247}, {"filename": "/src/main.vtx", "start": 57247, "end": 64780}, {"filename": "/src/resources/cat.jpg", "start": 64780, "end": 117798}, {"filename": "/src/resources/loader.gif", "start": 117798, "end": 189989}], "remote_package_size": 189989});
+    loadPackage({"files": [{"filename": "/src/components/Modal/Modal.vtx", "start": 0, "end": 1121}, {"filename": "/src/components/OtherComponent/OtherComponent.vtx", "start": 1121, "end": 3234}, {"filename": "/src/components/SomeComponent/SomeComponent.vtx", "start": 3234, "end": 8178}, {"filename": "/src/components/SomeComponent/template.html", "start": 8178, "end": 10135}, {"filename": "/src/lib/whirlwind.vtx", "start": 10135, "end": 61252}, {"filename": "/src/main.vtx", "start": 61252, "end": 68785}, {"filename": "/src/resources/cat.jpg", "start": 68785, "end": 121803}, {"filename": "/src/resources/loader.gif", "start": 121803, "end": 193994}], "remote_package_size": 193994});
 
   })();

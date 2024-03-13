@@ -88,7 +88,13 @@ const template = `
         <p> {{ book.title }} - {{ book.author }} </p>
         </li>
     </ul>
-    <button @click: changeNums> Change Nums </button>
+    <ul>
+        <li %for: {{"nums, num"}} $listStyleType: none>
+        <p> {{ num }} </p>
+        </li>
+    </ul>
+    <button @click: {{ nums.append(10) }} className: {{ "btn" }} $backgroundColor: {{ props.color }}> Add Num </button>
+    <button @click: removeNum className: btn $backgroundColor: red> Remove Num </button>
 </div>
 `
 
@@ -103,7 +109,8 @@ const data = {
     }, {
         author: "Bradley Eric",
         title: "Forsaken Rights"
-    }]
+    }],
+    addNumColor: "green"
 }
 
 const methods = (data) => ({
@@ -113,14 +120,20 @@ const methods = (data) => ({
             value: ""
         })
     },
-    changeNums: () => {
+    addNum: () => {
+        if (data.nums.length() == 0) {
+            data.nums.append(1)
+            return
+        }
         data.nums.append(data.nums[data.nums.length()-1] + 1)
+    },
+    removeNum: () => {
+        data.nums.remove(data.nums.length()-1)
     }
 })
 
 const OtherComponent = component(template, data, methods)import [attribute, event, component] : "../../lib/whirlwind"
 import [replaceAll] : string
-import io
 
 import [OtherComponent] : "../OtherComponent/OtherComponent"
 import [Modal] : "../Modal/Modal"
@@ -211,7 +224,7 @@ const template = `
 > 
     Hide 
 </button>
-<OtherComponent color: red />
+<OtherComponent color: black />
 <button 
     #showModal
     @click: onShowModal
@@ -228,11 +241,10 @@ const template = `
 > 
     Change address
 </button>
-<!- <Modal #modal title: "Hello"  content: "This is the content"  variant: success $display: none /> ->
 <div %if: showModal className: modaldiv>
     <Modal
         #modal
-        title: "Hello" 
+        title: {{ "Hello, this is " + name }} 
         content: "This is the content" 
         variant: success
         @customCloseEvent: onCloseModal
@@ -1187,10 +1199,18 @@ const extractProperties = (elem) => {
     }
     var index = 0
     var id = "";
-    var events = {}
-    var styles = {}
-    var props = {}
-    var inner = {}
+    var events = {
+        _dynamic: []
+    }
+    var styles = {
+        _dynamic: []
+    }
+    var props = {
+        _dynamic: []
+    }
+    var inner = {
+        _dynamic: []
+    }
     const elem_type = elem.type.substring(1, elem.type.length()).trim().substring(elem.name.length(), elem.type.length())
     while (elem_type[index]) {
         if (elem_type[index] == "#") {
@@ -1218,6 +1238,7 @@ const extractProperties = (elem) => {
             index += 1
             var hit_first_letter = false
             var is_quote = false
+            var is_dynamic = false
             while (true) {
                 if (!elem_type[index].is_whitespace()) {
                     hit_first_letter = true
@@ -1245,7 +1266,20 @@ const extractProperties = (elem) => {
                     }
                 }
 
-                if (is_quote) {
+                if (elem_type[index] == "{" and elem_type[index + 1] == "{") {
+                    is_dynamic = true
+                    index += 2
+                    while (true) {
+                        if (elem_type[index] == "}" and elem_type[index + 1] == "}") {
+                            index += 2
+                            break
+                        }
+                        func_name += elem_type[index]
+                        index += 1
+                    }
+                }
+
+                if (is_quote or is_dynamic) {
                     break
                 }
 
@@ -1253,6 +1287,9 @@ const extractProperties = (elem) => {
                 index += 1
             }
             events[event_type.trim()] = func_name.trim()
+            if (is_dynamic) {
+                events["_dynamic"].append(event_type.trim())
+            }
         }
 
         else if (elem_type[index] == "$") {
@@ -1269,6 +1306,7 @@ const extractProperties = (elem) => {
             index += 1
             var hit_first_letter = false
             var is_quote = false
+            var is_dynamic = false
             while (true) {
                 if (!elem_type[index].is_whitespace()) {
                     hit_first_letter = true
@@ -1296,7 +1334,20 @@ const extractProperties = (elem) => {
                     }
                 }
 
-                if (is_quote) {
+                if (elem_type[index] == "{" and elem_type[index + 1] == "{") {
+                    is_dynamic = true
+                    index += 2
+                    while (true) {
+                        if (elem_type[index] == "}" and elem_type[index + 1] == "}") {
+                            index += 2
+                            break
+                        }
+                        style_value += elem_type[index]
+                        index += 1
+                    }
+                }
+
+                if (is_quote or is_dynamic) {
                     break
                 }
 
@@ -1304,6 +1355,9 @@ const extractProperties = (elem) => {
                 index += 1
             }
             styles[style_type.trim()] = style_value.trim()
+            if (is_dynamic) {
+                styles["_dynamic"].append(style_type.trim())
+            }
         }
 
         else if (elem_type[index] == "%") {
@@ -1320,6 +1374,7 @@ const extractProperties = (elem) => {
             index += 1
             var hit_first_letter = false
             var is_quote = false
+            var is_dynamic = false
             while (true) {
                 if (!elem_type[index].is_whitespace()) {
                     hit_first_letter = true
@@ -1347,7 +1402,20 @@ const extractProperties = (elem) => {
                     }
                 }
 
-                if (is_quote) {
+                if (elem_type[index] == "{" and elem_type[index + 1] == "{") {
+                    is_dynamic = true
+                    index += 2
+                    while (true) {
+                        if (elem_type[index] == "}" and elem_type[index + 1] == "}") {
+                            index += 2
+                            break
+                        }
+                        inner_value += elem_type[index]
+                        index += 1
+                    }
+                }
+
+                if (is_quote or is_dynamic) {
                     break
                 }
 
@@ -1355,6 +1423,9 @@ const extractProperties = (elem) => {
                 index += 1
             }
             inner[inner_type.trim()] = inner_value.trim()
+            if (is_dynamic) {
+                inner["_dynamic"].append(inner_type.trim())
+            }
         }
 
         else if (elem_type[index] == "/" and elem_type[index + 1] == "/") {
@@ -1383,6 +1454,7 @@ const extractProperties = (elem) => {
             index += 1
             var hit_first_letter = false
             var is_quote = false
+            var is_dynamic = false
             while (true) {
                 if (!elem_type[index].is_whitespace()) {
                     hit_first_letter = true
@@ -1410,7 +1482,20 @@ const extractProperties = (elem) => {
                     }
                 }
 
-                if (is_quote) {
+                if (elem_type[index] == "{" and elem_type[index + 1] == "{") {
+                    is_dynamic = true
+                    index += 2
+                    while (true) {
+                        if (elem_type[index] == "}" and elem_type[index + 1] == "}") {
+                            index += 2
+                            break
+                        }
+                        prop_value += elem_type[index]
+                        index += 1
+                    }
+                }
+
+                if (is_quote or is_dynamic) {
                     break
                 }
 
@@ -1418,6 +1503,9 @@ const extractProperties = (elem) => {
                 index += 1
             }
             props[prop_name.trim()] = prop_value.trim()
+            if (is_dynamic) {
+                props["_dynamic"].append(prop_name.trim())
+            }
         }
 
         index += 1
@@ -1657,15 +1745,35 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             }
 
             // If we have styles, we apply them here
+            // Let's update the values for dynamic styles first
+
+            for (props.styles._dynamic, index, val) {
+                props.styles[val] = eval(props.styles[val], data)
+            }
+
             e.update({
                 style: props.styles
             })
 
+            // Handle dynamic events by making them a function
+
+            for (props.events._dynamic, index, val) {
+                const s = props.events[val]
+                const fn = () => eval(f`${s}`, data)
+                props.events[val] = fn
+            }
+
             // If we have events, we apply them here
             props.events.info().keys.forEach((key) => {
-                const method_name = props.events[key]
-                var method = methods[method_name]
+                const method_value = props.events[key]
+                var method;
+                if (method_value.type() == "String") {
+                    method = methods[method_value]
+                } else {
+                    method = method_value
+                }
                 var injected_method = method
+
                 if (method.info().arity == 1) {
                     // Inject the parent here
                     injected_method = () => method(parent)
@@ -1730,11 +1838,21 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             })
 
             // If we have props, we apply them here
+
+            for (props.props._dynamic, index, val) {
+                props.props[val] = eval(props.props[val], data)
+            }
+
             if (props.props) {
                 e.update(props.props)
             }
 
             // If we have inner events, we apply them here
+
+            for (props.inner._dynamic, index, val) {
+                props.inner[val] = eval(props.inner[val], data)
+            }
+
             props.inner.info().keys.forEach((key) => {
                 const value = props.inner[key]
                 if (key == "if") {
