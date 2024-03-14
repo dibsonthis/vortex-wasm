@@ -45,7 +45,7 @@ const template = `
         <p> {{ num }} </p>
         </li>
     </ul>
-    <button @click: {{ nums.append(10) }} className: {{ "btn" }} $backgroundColor: {{ props.color }}> Add Num </button>
+    <button @click: {{ nums.append(nums[nums.length()-1] + 1) }} className: {{ "btn" }} $backgroundColor: {{ props.color }}> Add Num </button>
     <button @click: removeNum className: btn $backgroundColor: red> Remove Num </button>
 </div>
 `
@@ -66,6 +66,15 @@ const data = {
 }
 
 const methods = (data) => ({
+    init: (parent) => {
+        // println("Hi")
+        println(parent.info().keys)
+        // println("start")
+        // for (parent.info().keys, index, key) {
+        //     println(key)
+        // }
+        // println("end")
+    },
     updateTitle: (parent) => {
         data.title = parent.nameDiv.nameInput.value()
         parent.nameDiv.nameInput.update({

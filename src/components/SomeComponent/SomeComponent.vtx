@@ -90,7 +90,11 @@ const template = `
 > 
     Hide 
 </button>
-<OtherComponent color: black />
+<ul>
+    <div %for: "nums, n">
+        <OtherComponent color: black />
+    </div>
+</ul>
 <button 
     #showModal
     @click: onShowModal
@@ -144,6 +148,7 @@ const methods = (data) => ({
                 backgroundColor: data.props.favColor
             }
         })
+        
         parent.imgDiv.topImage.update({
             src: data.props.img
         })

@@ -753,7 +753,7 @@ const extractProperties = (elem) => {
         }
     }
     var index = 0
-    var id = "";
+    var id = None;
     var events = {
         _dynamic: [],
         _dynamic_raw: {},
@@ -773,6 +773,7 @@ const extractProperties = (elem) => {
     const elem_type = elem.type.substring(1, elem.type.length()).trim().substring(elem.name.length(), elem.type.length())
     while (elem_type[index]) {
         if (elem_type[index] == "#") {
+            id = ""
             index += 1
             while (true) {
                 if (elem_type[index].is_whitespace() or elem_type[index] == ">") {
@@ -1508,7 +1509,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                                 }
                             })
                         }
-                        // for (deps, dep_index, dep_val) {
+
                         deps.forEach((dep_val, dep_index) => {
                             set_prop_hook(data, dep_val, (info) => {
                                 if (e._data) {
@@ -1537,7 +1538,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     }
                 }
                 if (key == "for") {
-                    println("FOUND FOR - ", i)
+                    // println("FOUND FOR - ", i)
                     collecting_for_children = true
                     e.__is_for = true
                     var value = props.inner[key]
@@ -1587,7 +1588,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             var last_stack_elem = stack[stack.length() - 1]
             if (tag.name == last_stack_elem.type) {
                 if (last_stack_elem.__is_for) {
-                    println("POPPING FOR - ", i)
+                    // println("POPPING FOR - ", i)
                     collecting_for_children = false
                 }
                 stack.remove(stack.length() - 1)
@@ -1599,12 +1600,14 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
     // Let's create the looped elements
     
-    // for (looped_elements, index, elem) {
     looped_elements.forEach((elem, index) => {
         var dependencies = []
         const container = elem.current_parent
         const list = elem.values[0]
         dependencies.append(list)
+
+        const methods_copy = copy(methods)
+        methods_copy.remove_prop("init")
 
         if (elem.values.length() == 2) {
             var iterator = elem.values[1].trim()
@@ -1616,7 +1619,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             for (data[list], i, v) {
                 data[iterator] = v
                 var tags = elem.children
-                var e = createElement(tags, data, (data) => methods, custom, components)
+                var e = createElement(tags, data, (data) => methods_copy, custom, components)
                 wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
 
                 if (current_iterator_variable) {
@@ -1644,7 +1647,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             for (data[list], i, v) {
                 data[iterator] = v
                 var tags = elem.children
-                var e = createElement(tags, data, (data) => methods, custom, components)
+                var e = createElement(tags, data, (data) => methods_copy, custom, components)
                 wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
 
                 if (current_iterator_variable) {
@@ -1657,7 +1660,6 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
     })
 
     // End loops
-
     if (methods.init) {
         const arity = methods.init.info().arity
         if (arity == 0) {
