@@ -106,9 +106,9 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
       }
 Module['FS_createPath']("/", "src", true, true);
 Module['FS_createPath']("/src", "components", true, true);
+Module['FS_createPath']("/src/components", "App", true, true);
 Module['FS_createPath']("/src/components", "Modal", true, true);
-Module['FS_createPath']("/src/components", "OtherComponent", true, true);
-Module['FS_createPath']("/src/components", "SomeComponent", true, true);
+Module['FS_createPath']("/src/components", "Reactivity", true, true);
 Module['FS_createPath']("/src", "lib", true, true);
 Module['FS_createPath']("/src", "resources", true, true);
 
@@ -178,6 +178,6 @@ Module['FS_createPath']("/src", "resources", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/src/components/Modal/Modal.vtx", "start": 0, "end": 1121}, {"filename": "/src/components/OtherComponent/OtherComponent.vtx", "start": 1121, "end": 3494}, {"filename": "/src/components/SomeComponent/SomeComponent.vtx", "start": 3494, "end": 8509}, {"filename": "/src/components/SomeComponent/template.html", "start": 8509, "end": 10466}, {"filename": "/src/lib/whirlwind.vtx", "start": 10466, "end": 64704}, {"filename": "/src/main.vtx", "start": 64704, "end": 72237}, {"filename": "/src/resources/cat.jpg", "start": 72237, "end": 125255}, {"filename": "/src/resources/loader.gif", "start": 125255, "end": 197446}], "remote_package_size": 197446});
+    loadPackage({"files": [{"filename": "/src/components/App/App.vtx", "start": 0, "end": 2522}, {"filename": "/src/components/Modal/Modal.vtx", "start": 2522, "end": 3643}, {"filename": "/src/components/Reactivity/Reactivity.vtx", "start": 3643, "end": 5733}, {"filename": "/src/lib/whirlwind.vtx", "start": 5733, "end": 60119}, {"filename": "/src/main.vtx", "start": 60119, "end": 60644}, {"filename": "/src/resources/cat.jpg", "start": 60644, "end": 113662}, {"filename": "/src/resources/loader.gif", "start": 113662, "end": 185853}], "remote_package_size": 185853});
 
   })();

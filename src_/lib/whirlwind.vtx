@@ -1240,11 +1240,6 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             dependencies = elem.dependencies
             var e = elem.element
 
-            if (id) {
-                wasm.run_script(f`document.getElementById("${e.id}").id = "${id}";`)
-                e.id = id
-            }
-
             deps[string(i)] = []
 
             if (tag.name == "style") {

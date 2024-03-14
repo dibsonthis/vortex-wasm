@@ -1,4 +1,93 @@
-import [component, emit_event] : "../../lib/whirlwind"
+import [component, value, emit_event] : "../../lib/whirlwind"
+
+const template = f`
+
+    <style>
+
+    @import url("https://fonts.googleapis.com/css?family=Cabin+Condensed");
+    @import url("https://fonts.googleapis.com/css2?family=Madimi+One&display=swap");
+
+    body,html{margin:0;padding:0;height:100%;}
+    body{
+        background: #1a1a1a;
+        background-size:cover;
+        font-family: "Cabin Condensed", sans-serif !important;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        align-items:center;
+    }
+
+    span, p {
+        color: white
+    }
+
+    #vortexLink {
+        text-decoration: none;
+        color: red;
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    #title {
+        background-image: url("https://media.giphy.com/media/l378erJRv2o46Pmi4/giphy.gif");
+        font-family: "Madimi One", sans-serif;
+        color: transparent;
+        -moz-background-clip: text;
+        -webkit-background-clip: text;
+        text-transform: uppercase;
+        font-size: 60px;
+        font-weight: bold;
+        margin: 10px 0;
+        transition: all 0.3s ease-in-out;
+        cursor: default;
+        &:hover{ 
+            -webkit-transform: scale(1.2);
+        }
+    }
+
+    h2 {
+        color: white;
+    }
+
+    </style>
+    <div>
+        <div #title> {{ title }} </div>
+        <div $width: 800px $margin: "0 auto">
+            <span $fontSize: "18px" $fontWeight: 400> 
+                This is a small demo of 
+            </span>
+            <span>&nbsp;</span>
+            <span $fontSize: "18px" $fontWeight: 700> Whirlwind </span>
+            <span $fontSize: "18px" $fontWeight: 400>, a Web Framework written entirely in </span>
+            <span>&nbsp;</span>
+            <span $fontSize: "18px" $fontWeight: 400> <a #vortexLink href: "https://github.com/dibsonthis/Vortex" target: _blank> Vortex </a> </span>
+            <span>&nbsp;</span>
+            <span $fontSize: "18px" $fontWeight: 400> and running on the Vortex WebAssembly Interpreter. </span>
+        </div>
+        <div $width: 800px $margin: "0 auto" $marginTop: 50px>
+            <Reactivity />
+        </div>
+    </div>
+`
+
+import [Reactivity] : "../Reactivity/Reactivity"
+
+const data = {
+    title: "Welcome to Whirlwind"
+}
+
+const components = {
+    Reactivity: Reactivity
+}
+
+const methods = (data) => ({
+    init: () => {
+        println("Hello, I'll show up in the console when this component is loaded :)")
+    }
+})
+
+const App = component(template, data, methods, components)import [component, emit_event] : "../../lib/whirlwind"
 
 const template = `
 
@@ -47,417 +136,78 @@ const methods = (data) => ({
 })
 
 const Modal = component(template, {}, methods)import [component, value, emit_event] : "../../lib/whirlwind"
-import wasm
-import io
 
-const template = `
-<style>
-.btn {
-    padding: 10px;
-    margin: 5px;
-    color: white;
-    border-radius: 10px;
-    border: none;
-    font-size: 14px;
-    cursor: pointer;
-
-    transition: all 0.3s ease-in-out;
-    &:hover {
-        background-color: #3E95FF !important;
-    }
-}
-</style>
-
-<div>
-    <h1> {{ title }} </h1>
-    <div #nameDiv>
-        <input #nameInput $height: 30px $borderRadius: 10px />
-        <button 
-            className: btn
-            $backgroundColor: green
-            @click: updateTitle
-        > 
-            Change title 
-        </button>
-    </div>
-    <p> Hi, my name is "{{ name }}" and I am {{ age }} years old. </p>
-    <p> My favorite color is {{ props.color }}. </p>
-    <p> My favorite books are: </p>
-    <ul>
-        <li %for: "books, book" $listStyleType: none>
-        <p> {{ book.title }} - {{ book.author }} </p>
-        </li>
-    </ul>
-    <ul>
-        <li %for: {{"nums, num"}} $listStyleType: none>
-        <p> {{ num }} </p>
-        </li>
-    </ul>
-    <button @click: {{ nums.append(nums[nums.length()-1] + 1) }} className: {{ "btn" }} $backgroundColor: {{ props.color }}> Add Num </button>
-    <button @click: removeNum className: btn $backgroundColor: red> Remove Num </button>
-</div>
-`
-
-const data = {
-    title: "Hi there",
-    age: 18,
-    name: "Jason",
-    nums: [1, 2, 3, 4],
-    books: [{
-        author: "James Whitman",
-        title: "The Anaconda Touch"
-    }, {
-        author: "Bradley Eric",
-        title: "Forsaken Rights"
-    }],
-    addNumColor: "green"
-}
-
-const methods = (data) => ({
-    init: (parent) => {
-        // println("Hi")
-        println(parent.info().keys)
-        // println("start")
-        // for (parent.info().keys, index, key) {
-        //     println(key)
-        // }
-        // println("end")
-    },
-    updateTitle: (parent) => {
-        data.title = parent.nameDiv.nameInput.value()
-        parent.nameDiv.nameInput.update({
-            value: ""
-        })
-    },
-    addNum: () => {
-        if (data.nums.length() == 0) {
-            data.nums.append(1)
-            return
-        }
-        data.nums.append(data.nums[data.nums.length()-1] + 1)
-    },
-    removeNum: () => {
-        data.nums.remove(data.nums.length()-1)
-    }
-})
-
-const OtherComponent = component(template, data, methods)import [attribute, event, component] : "../../lib/whirlwind"
-import [replaceAll] : string
-
-import [OtherComponent] : "../OtherComponent/OtherComponent"
-import [Modal] : "../Modal/Modal"
-
-const template = `
-<style>
-.btn {
-    padding: 10px;
-    margin: 5px;
-    color: white;
-    border-radius: 10px;
-    border: none;
-    font-size: 14px;
-    cursor: pointer;
-
-    transition: all 0.3s ease-in-out;
-    &:hover {
-        background-color: #3E95FF !important;
-    }
-}
-</style>
-
-<div>
-<div #imgDiv>
-    <img
-        %if: show
-        #topImage 
-        src: "src/resources/cat.jpg" 
-        $width: 300px 
-        $height: 200px
-        $position: relative
-        $margin: 30px
-        $borderRadius: 10px
-        @enter: sayHi
-        @leave: sayBye
-        @move: printStuff
-    />
-</div>
-<label $fontSize: 20px>
-    <span>Name:</span>
-</label>
-<input 
-    #nameInput
-    @input: updateName
-    $margin: 5px
-/>
-<input 
-    #ageInput
-    @input: updateAge
-    _type: range 
-    min:"0" 
-    max:"200" 
-    value:"50"
-    $width: 200px />
-<p $fontWeight: bold> Hi, my name is "{{ name }}", my age is {{ age }} - I live at {{ address.street }}. Fav color is {{ props.favColor }} </p>
-<p>{{ age * 3.56 }}</p>
-<p>{{ age / 3.56 }}</p>
-<p>{ {{ mousePos.x }}, {{ mousePos.y }} }</p>
-<button 
-    #incrButton 
-    @click: incr
-    $backgroundColor: green
-    className: btn
-> 
-    Increase
-</button>
-<button 
-    #decrButton 
-    @click: decr 
-    $backgroundColor: red
-    className: btn
-> 
-    Decrease 
-</button>
-<button 
-    #changeName 
-    @click: changeName
-    $backgroundColor: orange
-    className: btn
-> 
-    Change name 
-</button>
-<button 
-    #toggleLoader
-    @click: toggleLoader
-    $backgroundColor: gray
-    className: btn
-> 
-    Hide 
-</button>
-<ul>
-    <div %for: "nums, n">
-        <OtherComponent color: black />
-    </div>
-</ul>
-<button 
-    #showModal
-    @click: onShowModal
-    $backgroundColor: "rgb(100, 200, 100)"
-    className: btn
-> 
-    Show Modal
-</button>
-<button 
-    #changeAddress
-    @click: changeAddress
-    $backgroundColor: "rgb(100, 200, 100)"
-    className: btn
-> 
-    Change address
-</button>
-<div %if: {{showModal}} className: {{ name }}>
-    <Modal
-        #modal
-        title: {{ "Hello, this is " + name }} 
-        content: "This is the content" 
-        variant: success
-        @customCloseEvent: onCloseModal
-    > 
-        <p> Hello, this is the custom content I am passing. </p> 
-        <p> Regards, {{ name }} </p>
-    </Modal>
-</div>
-</div>
-`
-
-const data = {
-    age: 45,
-    name: "John",
-    show: true,
-    nums: [1, 2, 3, 4, 5],
-    address: {
-        street: "123 Baker st."
-    },
-    mousePos: {
-        x: 0,
-        y: 0
-    },
-    showModal: false
-}
-
-const methods = (data) => ({
-    init: (parent) => {
-        parent.update({
-            style: {
-                backgroundColor: data.props.favColor
-            }
-        })
-        
-        parent.imgDiv.topImage.update({
-            src: data.props.img
-        })
-    },
-    incr: () => {
-        data.age += 1
-    },
-    decr: () => {
-        data.age -= 1
-    },
-    changeName: () => {
-        if (data.name == "John") {
-            data.name = "Allan"
-        } else {
-            data.name = "John"
-        }
-    },
-    updateName: (parent) => {
-        data.name = event().target.value
-    },
-    updateAge: (parent) => {
-        data.age = event().target.value.number()
-    },
-    toggleLoader: (parent) => {
-        parent.toggleLoader.update({
-            innerText: parent.toggleLoader.attribute("innerText") == "Show" and "Hide" or "Show"
-        })
-        data.show = !data.show
-    },
-    changeAddress: () => {
-        println(event())
-        data.address = {
-            street: "455 Bloop St."
-        }
-    },
-    sayHi: (parent) => {
-        println("Hi")
-        println(event())
-        parent.imgDiv.topImage.update({
-            style: {
-                width: string(parent.imgDiv.topImage.attribute("style.width").replaceAll("px", "").number() * 2) + "px",
-                height: string(parent.imgDiv.topImage.attribute("style.height").replaceAll("px", "").number() * 2) + "px"
-            }
-        })
-    },
-    sayBye: (parent) => {
-        println("Bye")
-        println(event())
-        parent.imgDiv.topImage.update({
-            style: {
-                width: string(parent.imgDiv.topImage.attribute("style.width").replaceAll("px", "").number() / 2) + "px",
-                height: string(parent.imgDiv.topImage.attribute("style.height").replaceAll("px", "").number() / 2) + "px",
-            }
-        })
-    },
-    printStuff: (parent) => {
-        var e = event()
-        data.mousePos.x = e.x
-        data.mousePos.y = e.y
-    },
-    onShowModal: (parent) => {
-        data.showModal = true
-    },
-    onCloseModal: () => {
-        const d = event().data
-        data.showModal = false
-        println(d)
-    }
-})
-
-const components = {
-    OtherComponent: OtherComponent,
-    Modal: Modal
-}
-
-const SomeComponent = component(template, data, methods, components)<style>
+const template = f`
+    <style>
     .btn {
         padding: 10px;
         margin: 5px;
         color: white;
         border-radius: 10px;
         border: none;
-        font-size: 14px;
+        font-size: 20px;
+        font-weight: bold;
         cursor: pointer;
-
         transition: all 0.3s ease-in-out;
+    }
+
+    #decrButton {
         &:hover {
-            background-color: #3E95FF !important;
+            background-color: red !important;
         }
     }
-</style>
 
-<div>
-    <img
-        %if: show
-        #loader 
-        src: "src/resources/cat.jpg" 
-        $width: 100px 
-        $height: 100px
-        $position: relative
-        @enter: sayHi
-        @leave: sayBye
-        @move: printStuff
-    />
-    <label $fontSize: 20px>
-        <span>Name:</span>
-    </label>
-    <input 
-        #nameInput
-        @input: updateName
-        $margin: 5px
-    />
-    <input 
-        #ageInput
-        @input: updateAge
-        _type: range 
-        min:"0" 
-        max:"200" 
-        value:"50"
-        $width: 200px />
-    <p $fontWeight: bold> Hi, my name is "{{ name }}", my age is {{ age }} - I live at {{ address.street }}. Fav color is {{ props.favColor }} </p>
-    <p>{{ age * 3.56 }}</p>
-    <p>{{ age / 3.56 }}</p>
-    <p>{ {{ mousePos.x }}, {{ mousePos.y }} }</p>
-    <button 
-        #incrButton 
-        @click: incr
-        $backgroundColor: green
-        className: btn
-    > 
-        Increase
-    </button>
-    <button 
-        #decrButton 
-        @click: decr 
-        $backgroundColor: red
-        className: btn
-    > 
-        Decrease 
-    </button>
-    <button 
-        #changeName 
-        @click: changeName
-        $backgroundColor: orange
-        className: btn
-    > 
-        Change name 
-    </button>
-    <button 
-        #toggleLoader
-        @click: toggleLoader
-        $backgroundColor: gray
-        className: btn
-    > 
-        Hide 
-    </button>
-    <OtherComponent color: red />
-    <button 
-        #changeAddress
-        @click: changeAddress
-        $backgroundColor: "rgb(100, 200, 100)"
-        className: btn
-    > 
-        Change address
-    </button>
-</div>import wasm
+    #incrButton {
+        &:hover {
+            background-color: green !important;
+        }
+    }
+
+    </style>
+
+    <div>
+        <h2> Reactivity with Hooks </h2>
+        <p $fontSize: "18px" $fontWeight: 400> 
+            Whirlwind achieves reactivity using Vortex hooks. Hooks are controlled side-effects that fire when a value is either accessed (onAccess hook) or changed (onChange hook).
+        </p>
+        <p $fontSize: "18px" $fontWeight: 400> 
+            Consider the following simple example. In our code, we have a value named 'count' and two methods that modify that value. 
+        </p>
+        <p $fontSize: "18px" $fontWeight: 400> 
+            We'll create an element that references that value. Whirlwind knows that this element is now bound to this value, and re-renders it whenever it changes. Give it a go:
+        </p>
+        <div 
+            $width: 200px 
+            $margin: "0 auto" 
+            $border: "5px solid #213780"
+            $borderRadius: 15px
+            $fontSize: 32px 
+            $color: #213780 
+            $fontWeight: bold
+            $marginBottom: 10px
+            $marginTop: 20px
+        > 
+            {{ count }} 
+        </div>
+        <button #incrButton @click: incrCount className: btn $backgroundColor: #2a591f> Increase </button>
+        <button #decrButton @click: decrCount className: btn $backgroundColor: #802121> Decrease </button>
+    </div>
+`
+
+const data = {
+    count: 0
+}
+
+const methods = (data) => ({
+    incrCount: () => {
+        data.count += 1
+    },
+    decrCount: () => {
+        data.count -= 1
+    }
+})
+
+const Reactivity = component(template, data, methods)import wasm
 import math
 import json
 import random
@@ -1699,6 +1449,11 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             dependencies = elem.dependencies
             var e = elem.element
 
+            if (id) {
+                wasm.run_script(f`document.getElementById("${e.id}").id = "${id}";`)
+                e.id = id
+            }
+
             deps[string(i)] = []
 
             if (tag.name == "style") {
@@ -2137,7 +1892,7 @@ const component = (html, data = {}, methods = (data) => ({}), components = {}) =
         return createElement(html, _data, methods, props, components)
     }
 }import [component] : "lib/whirlwind"
-import [SomeComponent] : "components/SomeComponent/SomeComponent"
+import [App] : "components/App/App"
 
 const template = `
     <style>
@@ -2152,284 +1907,15 @@ const template = `
     </style>
 
     <div className: "app">
-        <SomeComponent favColor: lightblue img: "src/resources/cat.jpg" />
+        <App />
     </div>
 `
 
 const Main = component(template, {}, (data) => ({}), {
-    SomeComponent: SomeComponent
+    App: App
 })
 
-Main()
-
-// SomeComponent({
-//     favColor: "lightblue",
-//     img: "src/resources/cat.jpg"
-// })
-
-// var breed_data = {}
-// var prev_market_price = 0
-// var prev_market_price_ref = ref(0)
-
-// const loader = img({
-//     src: "src/resources/loader.gif",
-//     style: {
-//         maxHeight: "100px",
-//         borderRadius: "100px"
-//     }
-// })
-
-// var marketPriceLabel = span({
-//     innerHTML: "XBTUSD Market price:",
-//     style: {
-//         fontWeight: "bold"
-//     }
-// })
-
-// var marketPrice = span({
-//     style: {
-//         marginLeft: "10px"
-//     }
-// })
-
-// var market_div = div({
-//     style: {
-//         marginTop: "20px",
-//         marginBottom: "20px"
-//     },
-//     children: [marketPriceLabel, marketPrice]
-// })
-
-// const socket = wasm.Socket("wss://ws.bitmex.com/realtime")
-// socket.on_open(() => {
-//     println("Connected")
-//     // Subscribe
-//     const msg = json.serialize({
-//         op: "subscribe",
-//         args: ["instrument:XBTUSD"]
-//     })
-//     socket.send(msg)
-// })
-// socket.on_message((message) => {
-//     const res = json.parse(message)
-//     if (res.data and res.data[0] and res.data[0].markPrice) {
-//         const markPrice = res.data[0].markPrice
-//         println(markPrice)
-//         marketPrice.update({
-//             innerHTML: "$" + markPrice.string(),
-//             style: {
-//                 color: (markPrice >= prev_market_price and "green" or "red")
-//             }
-//         })
-//         prev_market_price_ref.value = prev_market_price
-//         prev_market_price = markPrice
-//     }
-// })
-// socket.on_error(() => {
-//     println(f"Error")
-// })
-// socket.on_close((e) => {
-//     println(f"Disconnecting: ", e)
-// })
-
-// var buttons_div = div({
-//     style: {
-//         padding: "10px"
-//     }
-// })
-
-// var filterInput = input({
-//     name: "search",
-//     style: {
-//         margin: "10px"
-//     }
-// })
-
-// createCSSClass("img", "
-//     transition: transform 0.3s ease-in-out;
-//     &:hover {
-//         transform: scale(1.2) translateX(30px) rotate(10deg) !important;
-//     }
-// ")
-
-// createCSSClass("btn", "
-//     transition: transform 0.3s ease-in-out;
-//     &:hover {
-//         background-color: #3E95FF !important;
-//     }
-// ")
-
-// const button_styles = {
-//     backgroundColor: "#3e68ff",
-//     color: "#fff",
-//     margin: "5px",
-//     fontSize: "18px",
-//     fontWeight: "bold",
-//     borderRadius: "15px",
-//     border: "none",
-//     boxSizing: "border-box",
-//     cursor: "pointer",
-//     fontFamily: "inherit",
-//     boxShadow: "0 3px 5px rgba(0, 0, 0, 0.18)",
-//     textAlign: "center",
-//     width: "200px",
-//     height: "60px"
-// }
-
-// var image = img({
-//     className: "img",
-//     style: {
-//         maxHeight: "400px",
-//         borderRadius: "10px",
-//     },
-//     transition: "transform 0.3s ease-in-out"
-// })
-
-// const rb = button({
-//     innerHTML: "Rotate",
-//     style: {
-//         ...button_styles,
-//         backgroundColor: "green",
-//         height: "40px"
-//     },
-//     onClick: () => {
-//         const current_r = wasm.run_script_number(f"parseFloat(document.getElementById(`${image.id}`).style.transform.replace('rotate(', '').replace('deg)', '')) || 0;")
-//         image.update({
-//             style: {
-//                 transform: f"rotate(${180 + current_r}deg)"
-//             }
-//         })
-//     }
-// })
-
-// const url = reactive({
-//     type: "a",
-//     innerHTML: "",
-//     target: "_blank"
-// }, (data) => (data.src and {
-//     innerHTML: data.src,
-//     href: data.src
-// } or {}), image)
-
-// var image_div = div({
-//     children: [image, p({
-//         innerHTML: "",
-//         style: {
-//             fontFamily: "inherit",
-//             fontSize: "18px",
-//             fontWeight: "bold"
-//         }
-//     }), div({
-//             children: url, 
-//             style: {
-//                 marginBottom: "20px"
-//             }}), 
-//         rb]
-// })
-
-// const search_label = label({
-//     _for: filterInput.id,
-//     innerText: "Filter",
-//     style: {
-//         fontFamily: "inherit"
-//     }
-// })
-
-// filterInput.update({
-//     onInput: () => {
-//         const value = filterInput.value()
-//         buttons_div.update({
-//             children: breed_data.filter((e) => value == "" or e.name.lower().contains(value.lower())).map((e, i) => ({
-//                 type: "button",
-//                 id: i.string(),
-//                 className: "btn",
-//                 innerHTML: e.name,
-//                 style: {
-//                     ...button_styles
-//                 },
-//                 onClick: () => {
-//                     println(e)
-//                     image.update({
-//                         src: e.image and e.image.url or ""
-//                     })
-//                     image_div.update({
-//                         style: {
-//                             display: "block"
-//                         }
-//                     })
-//                     image_div.children[1].update({
-//                         innerHTML: e.name.upper()
-//                     })
-
-//                     scrollToTop()
-//                 }
-//             }))
-//         })
-//     }
-// })
-
-// var search_div = div({
-//     children: [search_label, filterInput]
-// })
-
-// const onSuccess = (data) => {
-//     loader.update({
-//         style: {
-//             display: "none"
-//         }
-//     })
-//     var res = json.parse(data)
-//     breed_data = res;
-//     res[0].image and image.update({
-//         src: res[0].image.url
-//     })
-//     res[0].image and url.update({
-//         innerHTML: res[0].image.url,
-//         href: res[0].image.url
-//     })
-//     image_div.children[1].update({
-//         innerHTML: res[0].name.upper()
-//     })
-//     buttons_div.update({
-//         children: res.map((e, i) => ({
-//             type: "button",
-//             id: i.string(),
-//             className: "btn",
-//             innerHTML: e.name,
-//             style: {
-//                 ...button_styles
-//             },
-//             onClick: () => {
-//                 println(e)
-//                 image.update({
-//                     src: e.image and e.image.url or ""
-//                 })
-//                 image_div.children[1].update({
-//                     innerHTML: e.name.upper()
-//                 })
-
-//                 scrollToTop()
-//             }
-//         }))
-//     })
-// }
-
-// const api_key = "live_zHbEWQ3nQu77w2E06tbkSKsVj49Gr5DMY6B8jobyZ5wyDnPO0vkfJ8t7A6nbPa0m"
-// os.set_env("api_key", api_key)
-
-// var buttons_container = div({
-//     children: [buttons_div]
-// })
-
-// var structure = div({
-//     children: [market_div, loader, image_div, search_div, buttons_container]
-// })
-
-// println("OPTIMISED")
-
-// fetch.get("https://api.thecatapi.com/v1/breeds", onSuccess, (data) => println("Failed"), {
-//     "x-api-key": os.get_env("api_key")
-// })  ÿØÿà JFIF      ÿþ ;CREATOR: gd-jpeg v1.0 (using IJG JPEG v80), quality = 75
+Main()ÿØÿà JFIF      ÿþ ;CREATOR: gd-jpeg v1.0 (using IJG JPEG v80), quality = 75
 ÿÛ C 		
  $.' ",#(7),01444'9=82<.342ÿÛ C			2!!22222222222222222222222222222222222222222222222222ÿÀ +V" ÿÄ           	
 ÿÄ µ   } !1AQa"q2‘¡#B±ÁRÑð$3br‚	

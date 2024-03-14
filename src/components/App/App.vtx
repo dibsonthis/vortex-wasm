@@ -1,0 +1,90 @@
+import [component, value, emit_event] : "../../lib/whirlwind"
+
+const template = f`
+
+    <style>
+
+    @import url("https://fonts.googleapis.com/css?family=Cabin+Condensed");
+    @import url("https://fonts.googleapis.com/css2?family=Madimi+One&display=swap");
+
+    body,html{margin:0;padding:0;height:100%;}
+    body{
+        background: #1a1a1a;
+        background-size:cover;
+        font-family: "Cabin Condensed", sans-serif !important;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        align-items:center;
+    }
+
+    span, p {
+        color: white
+    }
+
+    #vortexLink {
+        text-decoration: none;
+        color: red;
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    #title {
+        background-image: url("https://media.giphy.com/media/l378erJRv2o46Pmi4/giphy.gif");
+        font-family: "Madimi One", sans-serif;
+        color: transparent;
+        -moz-background-clip: text;
+        -webkit-background-clip: text;
+        text-transform: uppercase;
+        font-size: 60px;
+        font-weight: bold;
+        margin: 10px 0;
+        transition: all 0.3s ease-in-out;
+        cursor: default;
+        &:hover{ 
+            -webkit-transform: scale(1.2);
+        }
+    }
+
+    h2 {
+        color: white;
+    }
+
+    </style>
+    <div>
+        <div #title> {{ title }} </div>
+        <div $width: 800px $margin: "0 auto">
+            <span $fontSize: "18px" $fontWeight: 400> 
+                This is a small demo of 
+            </span>
+            <span>&nbsp;</span>
+            <span $fontSize: "18px" $fontWeight: 700> Whirlwind </span>
+            <span $fontSize: "18px" $fontWeight: 400>, a Web Framework written entirely in </span>
+            <span>&nbsp;</span>
+            <span $fontSize: "18px" $fontWeight: 400> <a #vortexLink href: "https://github.com/dibsonthis/Vortex" target: _blank> Vortex </a> </span>
+            <span>&nbsp;</span>
+            <span $fontSize: "18px" $fontWeight: 400> and running on the Vortex WebAssembly Interpreter. </span>
+        </div>
+        <div $width: 800px $margin: "0 auto" $marginTop: 50px>
+            <Reactivity />
+        </div>
+    </div>
+`
+
+import [Reactivity] : "../Reactivity/Reactivity"
+
+const data = {
+    title: "Welcome to Whirlwind"
+}
+
+const components = {
+    Reactivity: Reactivity
+}
+
+const methods = (data) => ({
+    init: () => {
+        println("Hello, I'll show up in the console when this component is loaded :)")
+    }
+})
+
+const App = component(template, data, methods, components)

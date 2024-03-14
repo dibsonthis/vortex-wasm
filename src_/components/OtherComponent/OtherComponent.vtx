@@ -46,7 +46,7 @@ const template = `
         </li>
     </ul>
     <button @click: {{ nums.append(nums[nums.length()-1] + 1) }} className: {{ "btn" }} $backgroundColor: {{ props.color }}> Add Num </button>
-    <button @click: removeNum className: btn $backgroundColor: red> Remove Num </button>
+    <button @click: {{ nums.remove(nums.length()-1) }} className: btn $backgroundColor: red> Remove Num </button>
 </div>
 `
 

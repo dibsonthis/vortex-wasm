@@ -1,0 +1,73 @@
+import [component, value, emit_event] : "../../lib/whirlwind"
+
+const template = f`
+    <style>
+    .btn {
+        padding: 10px;
+        margin: 5px;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease-in-out;
+    }
+
+    #decrButton {
+        &:hover {
+            background-color: red !important;
+        }
+    }
+
+    #incrButton {
+        &:hover {
+            background-color: green !important;
+        }
+    }
+
+    </style>
+
+    <div>
+        <h2> Reactivity with Hooks </h2>
+        <p $fontSize: "18px" $fontWeight: 400> 
+            Whirlwind achieves reactivity using Vortex hooks. Hooks are controlled side-effects that fire when a value is either accessed (onAccess hook) or changed (onChange hook).
+        </p>
+        <p $fontSize: "18px" $fontWeight: 400> 
+            Consider the following simple example. In our code, we have a value named 'count' and two methods that modify that value. 
+        </p>
+        <p $fontSize: "18px" $fontWeight: 400> 
+            We'll create an element that references that value. Whirlwind knows that this element is now bound to this value, and re-renders it whenever it changes. Give it a go:
+        </p>
+        <div 
+            $width: 200px 
+            $margin: "0 auto" 
+            $border: "5px solid #213780"
+            $borderRadius: 15px
+            $fontSize: 32px 
+            $color: #213780 
+            $fontWeight: bold
+            $marginBottom: 10px
+            $marginTop: 20px
+        > 
+            {{ count }} 
+        </div>
+        <button #incrButton @click: incrCount className: btn $backgroundColor: #2a591f> Increase </button>
+        <button #decrButton @click: decrCount className: btn $backgroundColor: #802121> Decrease </button>
+    </div>
+`
+
+const data = {
+    count: 0
+}
+
+const methods = (data) => ({
+    incrCount: () => {
+        data.count += 1
+    },
+    decrCount: () => {
+        data.count -= 1
+    }
+})
+
+const Reactivity = component(template, data, methods)
