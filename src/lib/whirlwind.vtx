@@ -700,7 +700,21 @@ const parseHTML = (html) => {
         } else {
             // Text data
             var textStart = index;
-            while (index < html.length() && html[index] != "<") {
+            while (true) {
+                if (index > html.length()) {
+                    break
+                }
+                if (html[index] == "<") {
+                    if (tags[tags.length()-1] and tags[tags.length()-1].name == "script") {
+                        if (html[index + 1] == "/") {
+                            break
+                        } else {
+                            index += 1
+                            continue
+                        }
+                    }
+                    break
+                }
                 index += 1;
             }
             // Output the text
@@ -1210,6 +1224,18 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         tags = html
     }
 
+    // Eval the props coming in
+
+    if (data.props.info().keys.length() > 0) {
+        for (data.props._dynamic, index, val) {
+            if (data.props[val].type() != "String") {
+                continue
+            }
+            data.props._dynamic_raw[val] = data.props[val]
+            data.props[val] = eval(data.props[val], data)
+        }
+    }
+
     var stack = []
     var parent;
     var parent_exists = false;
@@ -1219,6 +1245,10 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
     var deps = {}
 
     var collecting_for_children = false
+
+    if (methods.before) {
+        methods.before()
+    }
 
     tags.forEach((tag, i) => {
 
@@ -1248,6 +1278,10 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             deps[string(i)] = []
 
             if (tag.name == "style") {
+                return
+            }
+
+            if (tag.name == "script") {
                 return
             }
 
@@ -1337,7 +1371,12 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             for (props.events._dynamic, index, val) {
                 const s = props.events[val]
-                const fn = () => eval(f`${s}`, data)
+                var fn;
+                if (e._data) {
+                    fn = () => eval(f`${s}`, {...data, ...e._data})
+                } else {
+                    fn = () => eval(f`${s}`, data)
+                }
                 props.events[val] = fn
             }
 
@@ -1431,6 +1470,9 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             })
 
             for (props.props._dynamic, index, val) {
+                if (props.props[val].type() != "String") {
+                    continue
+                }
                 props.props._dynamic_raw[val] = props.props[val]
                 props.props[val] = eval(props.props[val], prop_data)
             }
@@ -1579,6 +1621,10 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 return
             }
 
+            if (tag.name == "script") {
+                return
+            }
+
             if (is_custom) {
                 var last_stack_elem = customElementStack[customElementStack.length() - 1]
                 if (tag.name == last_stack_elem.customName) {
@@ -1612,6 +1658,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         dependencies.append(list)
 
         const methods_copy = copy(methods)
+        methods_copy.remove_prop("before")
         methods_copy.remove_prop("init")
 
         if (elem.values.length() == 2) {
@@ -1621,7 +1668,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
 
-            for (data[list], i, v) {
+            data[list].forEach((v) => {
                 data[iterator] = v
                 var tags = elem.children
                 var e = createElement(tags, data, (data) => methods_copy, custom, components)
@@ -1632,7 +1679,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 } else {
                     data.remove_prop(iterator)
                 }
-            }
+            })
         }
 
         const current_onchange = data[list].info().onChangeHook
@@ -1649,18 +1696,21 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
 
-            for (data[list], i, v) {
+            println(e)
+
+            data[list].forEach((v) => {
                 data[iterator] = v
                 var tags = elem.children
                 var e = createElement(tags, data, (data) => methods_copy, custom, components)
                 wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+
 
                 if (current_iterator_variable) {
                     data[iterator] = current_iterator_variable
                 } else {
                     data.remove_prop(iterator)
                 }
-            }
+            })
         })
     })
 

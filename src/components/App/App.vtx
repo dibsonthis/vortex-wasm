@@ -7,8 +7,7 @@ const template = f`
     @import url("https://fonts.googleapis.com/css?family=Cabin+Condensed");
     @import url("https://fonts.googleapis.com/css2?family=Madimi+One&display=swap");
 
-    body,html{margin:0;padding:0;height:100%;}
-    body{
+    body {
         background: #1a1a1a;
         background-size:cover;
         font-family: "Cabin Condensed", sans-serif !important;
@@ -16,6 +15,7 @@ const template = f`
         flex-direction:column;
         justify-content:center;
         align-items:center;
+        margin: 0;
     }
 
     span, p {
@@ -46,7 +46,7 @@ const template = f`
         }
     }
 
-    h2 {
+    h2, h3 {
         color: white;
     }
 
@@ -68,17 +68,31 @@ const template = f`
         <div $width: 800px $margin: "0 auto" $marginTop: 50px>
             <Reactivity />
         </div>
+        <Accordion sections: {{ [{
+            title: "Jason",
+            content: "Jason is a firefighter"
+        },
+        {
+            title: "Annie",
+            content: "Annie is a thief"
+        },
+        {
+            title: "Jerome",
+            content: "Jerome is a racer"
+        }] }} />
     </div>
 `
 
 import [Reactivity] : "../Reactivity/Reactivity"
+import [Accordion] : "../Accordion/Accordion"
 
 const data = {
     title: "Welcome to Whirlwind"
 }
 
 const components = {
-    Reactivity: Reactivity
+    Reactivity: Reactivity,
+    Accordion: Accordion,
 }
 
 const methods = (data) => ({

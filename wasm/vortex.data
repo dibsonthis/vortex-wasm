@@ -1,4 +1,98 @@
-import [component, value, emit_event] : "../../lib/whirlwind"
+import [component, wasm] : "../../lib/whirlwind"
+
+const template = `
+
+<style>
+    /* Style the buttons that are used to open and close the accordion panel */
+    .accordion {
+        background-color: #eee;
+        color: #444;
+        cursor: pointer;
+        padding: 18px;
+        width: 100%;
+        text-align: left;
+        border: none;
+        outline: none;
+        transition: 0.4s;
+    }
+    
+    /* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+    .active, .accordion:hover {
+        background-color: #ccc;
+    }
+    
+    /* Style the accordion panel. Note: hidden by default */
+    .panel {
+        padding: 0 18px;
+        background-color: white;
+        display: none;
+        overflow: hidden;
+    }
+</style>
+
+<div>
+<button className: btn @click: addSection> Add Section </button>
+<button className: btn @click: removeSection> Remove Section </button>
+<div $marginBottom: 20px>
+<div %for: "sections, section">
+    <button @click: {{ println(section) }} className: "accordion">{{section.title}}</button>
+    <div className: "panel">
+        <p $color: black>{{section.content}}</p>
+    </div>
+</div>
+</div>
+</div>
+`
+
+const data = {
+    sections: [],
+    reactiveScript: f`
+        var acc = document.getElementsByClassName("accordion");
+        var i;
+
+        for (i = 0; i < acc.length; i++) {
+            acc[i].addEventListener("click", function() {
+                /* Toggle between adding and removing the "active" class,
+                to highlight the button that controls the panel */
+                this.classList.toggle("active");
+
+                /* Toggle between hiding and showing the active panel */
+                var panel = this.nextElementSibling;
+                if (panel.style.display === "block") {
+                    panel.style.display = "none";
+                } else {
+                    panel.style.display = "block";
+                }
+            });
+        }
+    `
+}
+
+const methods = (data) => ({
+    before: () => {
+        if (data.props.sections) {
+            data.sections = [...data.sections, ...data.props.sections]
+            println(data.sections)
+        }
+    },
+    init: (parent) => {
+        wasm.run_script(data.reactiveScript)
+    },
+    addSection: () => {
+        data.sections.append({
+            title: "Samantha",
+            content: "Samantha is DYNAMIC"
+        })
+        wasm.run_script(data.reactiveScript)
+
+    },
+    removeSection: () => {
+        data.sections.remove(0)
+        wasm.run_script(data.reactiveScript)
+    }
+})
+
+const Accordion = component(template, data, methods)import [component, value, emit_event] : "../../lib/whirlwind"
 
 const template = f`
 
@@ -7,8 +101,7 @@ const template = f`
     @import url("https://fonts.googleapis.com/css?family=Cabin+Condensed");
     @import url("https://fonts.googleapis.com/css2?family=Madimi+One&display=swap");
 
-    body,html{margin:0;padding:0;height:100%;}
-    body{
+    body {
         background: #1a1a1a;
         background-size:cover;
         font-family: "Cabin Condensed", sans-serif !important;
@@ -16,6 +109,7 @@ const template = f`
         flex-direction:column;
         justify-content:center;
         align-items:center;
+        margin: 0;
     }
 
     span, p {
@@ -46,7 +140,7 @@ const template = f`
         }
     }
 
-    h2 {
+    h2, h3 {
         color: white;
     }
 
@@ -68,17 +162,31 @@ const template = f`
         <div $width: 800px $margin: "0 auto" $marginTop: 50px>
             <Reactivity />
         </div>
+        <Accordion sections: {{ [{
+            title: "Jason",
+            content: "Jason is a firefighter"
+        },
+        {
+            title: "Annie",
+            content: "Annie is a thief"
+        },
+        {
+            title: "Jerome",
+            content: "Jerome is a racer"
+        }] }} />
     </div>
 `
 
 import [Reactivity] : "../Reactivity/Reactivity"
+import [Accordion] : "../Accordion/Accordion"
 
 const data = {
     title: "Welcome to Whirlwind"
 }
 
 const components = {
-    Reactivity: Reactivity
+    Reactivity: Reactivity,
+    Accordion: Accordion,
 }
 
 const methods = (data) => ({
@@ -103,10 +211,11 @@ const template = `
 
     .backdrop {
         top: 0;
+        left: 0;
         position: fixed;
         background: rgba(0, 0, 0, 0.5);
-        width: 100%;
-        height: 100%;
+        width: 100vw;
+        height: 100vh;
     }
 
     .closebtn {
@@ -131,11 +240,11 @@ const template = `
 
 const methods = (data) => ({
     close: (parent) => {
-        parent.emit_event("customCloseEvent", "closing the modal")
+        parent.emit_event("close", "closing the modal")
     }
 })
 
-const Modal = component(template, {}, methods)import [component, value, emit_event] : "../../lib/whirlwind"
+const Modal = component(template, {}, methods)import [component, value, emit_event, event, ref, attribute] : "../../lib/whirlwind"
 
 const template = f`
     <style>
@@ -191,11 +300,72 @@ const template = f`
         </div>
         <button #incrButton @click: incrCount className: btn $backgroundColor: #2a591f> Increase </button>
         <button #decrButton @click: decrCount className: btn $backgroundColor: #802121> Decrease </button>
+
+        <p $fontSize: "18px" $fontWeight: 400> 
+            In the above example, reactive hooks were fired when a click event is dispatched. Reactive hooks can fire for other events too, for example:
+        </p>
+
+        <h3> 
+            OnInput
+        </h3>
+        <input #exampleInput1 @input: updateValue />
+        <p> {{ inputValue }} </p>
+
+        <h3> 
+            OnBlur
+        </h3>
+        <input #exampleInput2 @blur: updateValue2 />
+        <p> {{ inputValue2 }} </p>
+
+        <h3> 
+            onMouseEnter, onMouseLeave and onMouseMove
+        </h3>
+        <p> {{ enterValue }} </p>
+        <div 
+            #mouseExampleBox
+            $margin: "0 auto" 
+            $width: 200px 
+            $height: 100px 
+            $border: "5px solid white" 
+            $backgroundColor: black
+            $cursor: crosshair
+            @enter: toggleBoxColor
+            @leave: toggleBoxColor
+            @move: updateMousePos
+        />
+        <p %if: inBox> Your mouse is at ({{xPos}}, {{yPos}}) </p>
+
+        <h3 $marginTop: 30px> 
+            Custom Events
+        </h3>
+        <div %if: showModal>
+            <Modal title: "Hello, friend" @close: closeModal>
+                <p $fontWeight: bold $color: black> Your last mouse position was ({{xPos}}, {{yPos}}) </p>
+            </Modal>
+        </div>
+        <p> Sometimes we want to be able to emit and handle custom events from one component to another. Whirlwind allows you to do that using the 'emit_event' function:</p>
+
+        <button @click: showModal className: btn $backgroundColor: green> Show Modal </button>
+
+        <p> When the user clicks on the modal's backdrop, or the close button, the modal emits a custom close event that's then handled by the parent component. The parent component receives the event and changes the 'showModal' value to false.</p>
+        
     </div>
 `
 
+import [Modal] : "../Modal/Modal"
+
+const inputValueDefault = "Enter text above to update me"
+const inputValueDefault2 = "Enter text above and click away to update me"
+
 const data = {
-    count: 0
+    count: 0,
+    inputValue: inputValueDefault,
+    inputValue2: inputValueDefault2,
+    enterValue: "Move your cursor inside the box",
+    inBox: false,
+    xPos: 0,
+    yPos: 0,
+    showModal: false
 }
 
 const methods = (data) => ({
@@ -204,10 +374,50 @@ const methods = (data) => ({
     },
     decrCount: () => {
         data.count -= 1
+    },
+    updateValue: (parent) => {
+        var value = event().target.value
+        data.inputValue = value != "" and value or inputValueDefault
+    },
+    updateValue2: (parent) => {
+        var value = event().target.value
+        data.inputValue2 = value != "" and value or inputValueDefault2
+    },
+    toggleBoxColor: (parent) => {
+        const currentColor = parent.mouseExampleBox.attribute("style.backgroundColor");
+        var newColor;
+        if (currentColor == "black") {
+            data.enterValue = "You have entered the box"
+            data.inBox = true
+            newColor = "red"
+        } else {
+            data.enterValue = "You have exited the box"
+            data.inBox = false
+            newColor = "black"
+        }
+        parent.mouseExampleBox.update({
+            style: {
+                backgroundColor: newColor
+            }
+        })
+    },
+    updateMousePos: () => {
+        data.xPos = event().x
+        data.yPos = event().y
+    },
+    showModal: () => {
+        data.showModal = true
+    },
+    closeModal: () => {
+        data.showModal = false
     }
 })
 
-const Reactivity = component(template, data, methods)import wasm
+const components = {
+    Modal: Modal
+}
+
+const Reactivity = component(template, data, methods, components)import wasm
 import math
 import json
 import random
@@ -909,7 +1119,21 @@ const parseHTML = (html) => {
         } else {
             // Text data
             var textStart = index;
-            while (index < html.length() && html[index] != "<") {
+            while (true) {
+                if (index > html.length()) {
+                    break
+                }
+                if (html[index] == "<") {
+                    if (tags[tags.length()-1] and tags[tags.length()-1].name == "script") {
+                        if (html[index + 1] == "/") {
+                            break
+                        } else {
+                            index += 1
+                            continue
+                        }
+                    }
+                    break
+                }
                 index += 1;
             }
             // Output the text
@@ -1419,6 +1643,18 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         tags = html
     }
 
+    // Eval the props coming in
+
+    if (data.props.info().keys.length() > 0) {
+        for (data.props._dynamic, index, val) {
+            if (data.props[val].type() != "String") {
+                continue
+            }
+            data.props._dynamic_raw[val] = data.props[val]
+            data.props[val] = eval(data.props[val], data)
+        }
+    }
+
     var stack = []
     var parent;
     var parent_exists = false;
@@ -1428,6 +1664,10 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
     var deps = {}
 
     var collecting_for_children = false
+
+    if (methods.before) {
+        methods.before()
+    }
 
     tags.forEach((tag, i) => {
 
@@ -1457,6 +1697,10 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             deps[string(i)] = []
 
             if (tag.name == "style") {
+                return
+            }
+
+            if (tag.name == "script") {
                 return
             }
 
@@ -1546,7 +1790,12 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             for (props.events._dynamic, index, val) {
                 const s = props.events[val]
-                const fn = () => eval(f`${s}`, data)
+                var fn;
+                if (e._data) {
+                    fn = () => eval(f`${s}`, {...data, ...e._data})
+                } else {
+                    fn = () => eval(f`${s}`, data)
+                }
                 props.events[val] = fn
             }
 
@@ -1640,6 +1889,9 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             })
 
             for (props.props._dynamic, index, val) {
+                if (props.props[val].type() != "String") {
+                    continue
+                }
                 props.props._dynamic_raw[val] = props.props[val]
                 props.props[val] = eval(props.props[val], prop_data)
             }
@@ -1788,6 +2040,10 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 return
             }
 
+            if (tag.name == "script") {
+                return
+            }
+
             if (is_custom) {
                 var last_stack_elem = customElementStack[customElementStack.length() - 1]
                 if (tag.name == last_stack_elem.customName) {
@@ -1821,6 +2077,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         dependencies.append(list)
 
         const methods_copy = copy(methods)
+        methods_copy.remove_prop("before")
         methods_copy.remove_prop("init")
 
         if (elem.values.length() == 2) {
@@ -1830,18 +2087,20 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
 
-            for (data[list], i, v) {
+            data[list].forEach((v) => {
                 data[iterator] = v
                 var tags = elem.children
                 var e = createElement(tags, data, (data) => methods_copy, custom, components)
                 wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+
+                // data.remove_prop(iterator)
 
                 if (current_iterator_variable) {
                     data[iterator] = current_iterator_variable
                 } else {
                     data.remove_prop(iterator)
                 }
-            }
+            })
         }
 
         const current_onchange = data[list].info().onChangeHook
@@ -1858,18 +2117,22 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
 
-            for (data[list], i, v) {
+            println(e)
+
+            data[list].forEach((v) => {
                 data[iterator] = v
                 var tags = elem.children
                 var e = createElement(tags, data, (data) => methods_copy, custom, components)
                 wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+
+                // data.remove_prop(iterator)
 
                 if (current_iterator_variable) {
                     data[iterator] = current_iterator_variable
                 } else {
                     data.remove_prop(iterator)
                 }
-            }
+            })
         })
     })
 
@@ -1899,7 +2162,7 @@ const template = `
         .app {
             text-align: center;
             color: #2c3e50;
-            margin: 10px;
+            margin: 0;
             -moz-osx-font-smoothing: grayscale;
             -webkit-font-smoothing: antialiased;
             font-family: Avenir, Helvetica, Arial, sans-serif;

@@ -106,6 +106,7 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
       }
 Module['FS_createPath']("/", "src", true, true);
 Module['FS_createPath']("/src", "components", true, true);
+Module['FS_createPath']("/src/components", "Accordion", true, true);
 Module['FS_createPath']("/src/components", "App", true, true);
 Module['FS_createPath']("/src/components", "Modal", true, true);
 Module['FS_createPath']("/src/components", "Reactivity", true, true);
@@ -178,6 +179,6 @@ Module['FS_createPath']("/src", "resources", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/src/components/App/App.vtx", "start": 0, "end": 2522}, {"filename": "/src/components/Modal/Modal.vtx", "start": 2522, "end": 3643}, {"filename": "/src/components/Reactivity/Reactivity.vtx", "start": 3643, "end": 5733}, {"filename": "/src/lib/whirlwind.vtx", "start": 5733, "end": 60119}, {"filename": "/src/main.vtx", "start": 60119, "end": 60644}, {"filename": "/src/resources/cat.jpg", "start": 60644, "end": 113662}, {"filename": "/src/resources/loader.gif", "start": 113662, "end": 185853}], "remote_package_size": 185853});
+    loadPackage({"files": [{"filename": "/src/components/Accordion/Accordion.vtx", "start": 0, "end": 2657}, {"filename": "/src/components/App/App.vtx", "start": 2657, "end": 5535}, {"filename": "/src/components/Modal/Modal.vtx", "start": 5535, "end": 6664}, {"filename": "/src/components/Reactivity/Reactivity.vtx", "start": 6664, "end": 12139}, {"filename": "/src/lib/whirlwind.vtx", "start": 12139, "end": 68006}, {"filename": "/src/main.vtx", "start": 68006, "end": 68528}, {"filename": "/src/resources/cat.jpg", "start": 68528, "end": 121546}, {"filename": "/src/resources/loader.gif", "start": 121546, "end": 193737}], "remote_package_size": 193737});
 
   })();
