@@ -2143,6 +2143,10 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         methods_copy.remove_prop("before")
         methods_copy.remove_prop("init")
 
+        const ls = eval(list, data)
+
+        println(ls)
+
         if (elem.values.length() == 1) {
             wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
 
