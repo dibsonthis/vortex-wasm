@@ -32,8 +32,8 @@ const template = `
 
 <div>
     <div $marginBottom: 20px>
-        <div %for = "sections, section">
-            <button @click: {{ println(section) }} className: {{"accordion_" + __id}} $color: {{section.color}}>{{section.title}}</button>
+        <div %for = "sections, section, i">
+            <button @click: {{ println(section) }} className: {{"accordion_" + __id}} $color: {{section.color}}>{{ i + 1 }} - {{section.title}}</button>
             <div className: "panel">
                 <p $color: {{section.color}}>{{section.content}}</p>
             </div>
@@ -2143,7 +2143,15 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         methods_copy.remove_prop("before")
         methods_copy.remove_prop("init")
 
-        if (elem.values.length() == 2) {
+        if (elem.values.length() == 1) {
+            wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+
+            data[list].forEach((v) => {
+                var tags = elem.children
+                var e = createElement(tags, data, (data) => methods_copy, custom, components)
+                wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+            })
+        } else if (elem.values.length() == 2) {
             var iterator = elem.values[1].trim()
 
             const current_iterator_variable = data[iterator]
@@ -2160,6 +2168,34 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     data[iterator] = current_iterator_variable
                 } else {
                     data.remove_prop(iterator)
+                }
+            })
+        } else if (elem.values.length() == 3) {
+            var iterator = elem.values[1].trim()
+            var index_var = elem.values[2].trim()
+
+            const current_iterator_variable = data[iterator]
+            const current_index_variable = data[index_var]
+
+            wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+
+            data[list].forEach((v, i) => {
+                data[iterator] = v
+                data[index_var] = i
+                var tags = elem.children
+                var e = createElement(tags, data, (data) => methods_copy, custom, components)
+                wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+
+                if (current_iterator_variable) {
+                    data[iterator] = current_iterator_variable
+                } else {
+                    data.remove_prop(iterator)
+                }
+
+                if (current_index_variable) {
+                    data[index_var] = current_index_variable
+                } else {
+                    data.remove_prop(index_var)
                 }
             })
         }
@@ -2172,25 +2208,82 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 current_onchange(e)
             }
 
-            var iterator = elem.values[1].trim()
+            if (elem.values.length() == 1) {
+                wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+    
+                data[list].forEach((v) => {
+                    var tags = elem.children
+                    var e = createElement(tags, data, (data) => methods_copy, custom, components)
+                    wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+                })
+            } else if (elem.values.length() == 2) {
+                var iterator = elem.values[1].trim()
+    
+                const current_iterator_variable = data[iterator]
+    
+                wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+    
+                data[list].forEach((v) => {
+                    data[iterator] = v
+                    var tags = elem.children
+                    var e = createElement(tags, data, (data) => methods_copy, custom, components)
+                    wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+    
+                    if (current_iterator_variable) {
+                        data[iterator] = current_iterator_variable
+                    } else {
+                        data.remove_prop(iterator)
+                    }
+                })
+            } else if (elem.values.length() == 3) {
+                var iterator = elem.values[1].trim()
+                var index_var = elem.values[2].trim()
+    
+                const current_iterator_variable = data[iterator]
+                const current_index_variable = data[index_var]
+    
+                wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+    
+                data[list].forEach((v, i) => {
+                    data[iterator] = v
+                    data[index_var] = i
+                    var tags = elem.children
+                    var e = createElement(tags, data, (data) => methods_copy, custom, components)
+                    wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+    
+                    if (current_iterator_variable) {
+                        data[iterator] = current_iterator_variable
+                    } else {
+                        data.remove_prop(iterator)
+                    }
+    
+                    if (current_index_variable) {
+                        data[index_var] = current_index_variable
+                    } else {
+                        data.remove_prop(index_var)
+                    }
+                })
+            }
 
-            const current_iterator_variable = data[iterator]
+            // var iterator = elem.values[1].trim()
 
-            wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+            // const current_iterator_variable = data[iterator]
 
-            data[list].forEach((v) => {
-                data[iterator] = v
-                var tags = elem.children
-                var e = createElement(tags, data, (data) => methods_copy, custom, components)
-                wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+            // wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+
+            // data[list].forEach((v) => {
+            //     data[iterator] = v
+            //     var tags = elem.children
+            //     var e = createElement(tags, data, (data) => methods_copy, custom, components)
+            //     wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
 
 
-                if (current_iterator_variable) {
-                    data[iterator] = current_iterator_variable
-                } else {
-                    data.remove_prop(iterator)
-                }
-            })
+            //     if (current_iterator_variable) {
+            //         data[iterator] = current_iterator_variable
+            //     } else {
+            //         data.remove_prop(iterator)
+            //     }
+            // })
         })
     })
 

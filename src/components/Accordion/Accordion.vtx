@@ -32,8 +32,8 @@ const template = `
 
 <div>
     <div $marginBottom: 20px>
-        <div %for = "sections, section">
-            <button @click: {{ println(section) }} className: {{"accordion_" + __id}} $color: {{section.color}}>{{section.title}}</button>
+        <div %for = "sections, section, i">
+            <button @click: {{ println(section) }} className: {{"accordion_" + __id}} $color: {{section.color}}>{{ i + 1 }} - {{section.title}}</button>
             <div className: "panel">
                 <p $color: {{section.color}}>{{section.content}}</p>
             </div>
