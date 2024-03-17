@@ -5,6 +5,10 @@ import random
 import [forEach, map] : functional
 import [substring, trim, split, replaceAll, contains, startsWith] : string
 
+const uuid = () => {
+    return string(math.abs(random.rand()))
+}
+
 const __script_event_stringify = "globalThis._event = JSON.stringify({
     type: e.type,
     clientX: e.clientX,
@@ -802,7 +806,7 @@ const extractProperties = (elem) => {
             index += 1
             var event_type = ""
             var func_name = ""
-            while (elem_type[index] != ":") {
+            while (elem_type[index] != ":" and elem_type[index] != "=") {
                 event_type += elem_type[index]
                 index += 1
                 if (!elem_type[index] or elem_type[index] == ">") {
@@ -870,7 +874,7 @@ const extractProperties = (elem) => {
             index += 1
             var style_type = ""
             var style_value = ""
-            while (elem_type[index] != ":") {
+            while (elem_type[index] != ":" and elem_type[index] != "=") {
                 style_type += elem_type[index]
                 index += 1
                 if (!elem_type[index] or elem_type[index] == ">") {
@@ -938,7 +942,7 @@ const extractProperties = (elem) => {
             index += 1
             var inner_type = ""
             var inner_value = ""
-            while (elem_type[index] != ":") {
+            while (elem_type[index] != ":" and elem_type[index] != "=") {
                 inner_type += elem_type[index]
                 index += 1
                 if (!elem_type[index] or elem_type[index] == ">") {
@@ -1018,7 +1022,7 @@ const extractProperties = (elem) => {
         else if (alpha.contains(elem_type[index]) or elem_type[index] == "_") {
             var prop_name = ""
             var prop_value = ""
-            while (elem_type[index] != ":") {
+            while (elem_type[index] != ":" and elem_type[index] != "=") {
                 prop_name += elem_type[index]
                 index += 1
                 if (!elem_type[index] or elem_type[index] == ">") {
@@ -1191,10 +1195,12 @@ const new_element = (tag, data, dep, config, is_custom, components, props, colle
 
     if (is_custom) {
         const comp = components[tag.name]
+        println(components)
         if (!comp) {
-            println(f"Warning: No such component '${tag.name}'" )
+            println(f"Warning: No such component '${tag.name}'")
+        } else {
+            e = comp(props.props, data)
         }
-        e = comp(props.props)
     } else {
        e = element(config)
     }
@@ -1209,11 +1215,15 @@ const new_element = (tag, data, dep, config, is_custom, components, props, colle
 
 const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, components = {}) => {
 
+    // if (!data.__id) {
+    //     data.__id = uuid()
+    // }
+
     var looped_elements = []
 
-    methods = methods(data)
-
     data.props = custom
+
+    methods = methods(data)
 
     var tags;
 
@@ -1224,6 +1234,19 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         tags = html
     }
 
+    if (methods.setup) {
+        methods.setup()
+    }
+
+    // We need the parent data merged in
+    // So that we can more naturally put dynamic props in the parent
+    // When creating a custom element
+    // ie: <CustonElement title: {{ title }} />
+    // title is evaluated here, inside the custom component, not in the parent
+    // So to avoid something ugly like: <CustonElement title: {{ __parent.title }} />
+    // we merge the parent data in for the props evaluation
+    const __data_parent_merged = {...data, ...data.__parent}
+
     // Eval the props coming in
 
     if (data.props.info().keys.length() > 0) {
@@ -1232,7 +1255,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 continue
             }
             data.props._dynamic_raw[val] = data.props[val]
-            data.props[val] = eval(data.props[val], data)
+            data.props[val] = eval(data.props[val], __data_parent_merged)
         }
     }
 
@@ -1658,6 +1681,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         dependencies.append(list)
 
         const methods_copy = copy(methods)
+        methods_copy.remove_prop("setup")
         methods_copy.remove_prop("before")
         methods_copy.remove_prop("init")
 
@@ -1696,8 +1720,6 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
 
-            println(e)
-
             data[list].forEach((v) => {
                 data[iterator] = v
                 var tags = elem.children
@@ -1728,8 +1750,9 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 }
 
 const component = (html, data = {}, methods = (data) => ({}), components = {}) => {
-    return const component_create = (props = {}) => {
-        var _data = copy(data)
+    return const component_create = (props = {}, extra_data = {}) => {
+        var _data = {...copy(data), __parent: extra_data}
+        _data.__id = uuid()
         return createElement(html, _data, methods, props, components)
     }
 }

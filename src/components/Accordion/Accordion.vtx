@@ -4,7 +4,7 @@ const template = `
 
 <style>
     /* Style the buttons that are used to open and close the accordion panel */
-    .accordion {
+    .accordion_{{__id}} {
         background-color: #eee;
         color: #444;
         cursor: pointer;
@@ -17,7 +17,7 @@ const template = `
     }
     
     /* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
-    .active, .accordion:hover {
+    .active_{{__id}}, .accordion_{{__id}}:hover {
         background-color: #ccc;
     }
     
@@ -31,30 +31,39 @@ const template = `
 </style>
 
 <div>
-<button className: btn @click: addSection> Add Section </button>
-<button className: btn @click: removeSection> Remove Section </button>
-<div $marginBottom: 20px>
-<div %for: "sections, section">
-    <button @click: {{ println(section) }} className: "accordion">{{section.title}}</button>
-    <div className: "panel">
-        <p $color: black>{{section.content}}</p>
+    <button className: btn @click: addSection> Add Section </button>
+    <button className: btn @click: removeSection> Remove Section </button>
+    <div $marginBottom: 20px>
+        <div %for: "sections, section">
+            <button @click: {{ println(section) }} className: {{"accordion_" + __id}}>{{section.title}}</button>
+            <div className: "panel">
+                <p $color: black>{{section.content}}</p>
+            </div>
+        </div>
     </div>
-</div>
-</div>
 </div>
 `
 
 const data = {
+    id: id,
     sections: [],
-    reactiveScript: f`
-        var acc = document.getElementsByClassName("accordion");
-        var i;
+}
 
-        for (i = 0; i < acc.length; i++) {
-            acc[i].addEventListener("click", function() {
+const methods = (data) => ({
+    before: () => {
+        if (data.props.sections) {
+            data.sections = [...data.sections, ...data.props.sections]
+        }
+
+        data.reactiveScript = f`
+            var acc = document.getElementsByClassName("accordion_${data.__id}");
+            var i;
+
+            for (i = 0; i < acc.length; i++) {
+                acc[i].addEventListener("click", function() {
                 /* Toggle between adding and removing the "active" class,
                 to highlight the button that controls the panel */
-                this.classList.toggle("active");
+                this.classList.toggle("active_${data.__id}");
 
                 /* Toggle between hiding and showing the active panel */
                 var panel = this.nextElementSibling;
@@ -64,16 +73,7 @@ const data = {
                     panel.style.display = "block";
                 }
             });
-        }
-    `
-}
-
-const methods = (data) => ({
-    before: () => {
-        if (data.props.sections) {
-            data.sections = [...data.sections, ...data.props.sections]
-            println(data.sections)
-        }
+        }`
     },
     init: (parent) => {
         wasm.run_script(data.reactiveScript)

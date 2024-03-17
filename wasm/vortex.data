@@ -4,7 +4,7 @@ const template = `
 
 <style>
     /* Style the buttons that are used to open and close the accordion panel */
-    .accordion {
+    .accordion_{{__id}} {
         background-color: #eee;
         color: #444;
         cursor: pointer;
@@ -17,7 +17,7 @@ const template = `
     }
     
     /* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
-    .active, .accordion:hover {
+    .active_{{__id}}, .accordion_{{__id}}:hover {
         background-color: #ccc;
     }
     
@@ -31,30 +31,39 @@ const template = `
 </style>
 
 <div>
-<button className: btn @click: addSection> Add Section </button>
-<button className: btn @click: removeSection> Remove Section </button>
-<div $marginBottom: 20px>
-<div %for: "sections, section">
-    <button @click: {{ println(section) }} className: "accordion">{{section.title}}</button>
-    <div className: "panel">
-        <p $color: black>{{section.content}}</p>
+    <button className: btn @click: addSection> Add Section </button>
+    <button className: btn @click: removeSection> Remove Section </button>
+    <div $marginBottom: 20px>
+        <div %for: "sections, section">
+            <button @click: {{ println(section) }} className: {{"accordion_" + __id}}>{{section.title}}</button>
+            <div className: "panel">
+                <p $color: black>{{section.content}}</p>
+            </div>
+        </div>
     </div>
-</div>
-</div>
 </div>
 `
 
 const data = {
+    id: id,
     sections: [],
-    reactiveScript: f`
-        var acc = document.getElementsByClassName("accordion");
-        var i;
+}
 
-        for (i = 0; i < acc.length; i++) {
-            acc[i].addEventListener("click", function() {
+const methods = (data) => ({
+    before: () => {
+        if (data.props.sections) {
+            data.sections = [...data.sections, ...data.props.sections]
+        }
+
+        data.reactiveScript = f`
+            var acc = document.getElementsByClassName("accordion_${data.__id}");
+            var i;
+
+            for (i = 0; i < acc.length; i++) {
+                acc[i].addEventListener("click", function() {
                 /* Toggle between adding and removing the "active" class,
                 to highlight the button that controls the panel */
-                this.classList.toggle("active");
+                this.classList.toggle("active_${data.__id}");
 
                 /* Toggle between hiding and showing the active panel */
                 var panel = this.nextElementSibling;
@@ -64,16 +73,7 @@ const data = {
                     panel.style.display = "block";
                 }
             });
-        }
-    `
-}
-
-const methods = (data) => ({
-    before: () => {
-        if (data.props.sections) {
-            data.sections = [...data.sections, ...data.props.sections]
-            println(data.sections)
-        }
+        }`
     },
     init: (parent) => {
         wasm.run_script(data.reactiveScript)
@@ -162,26 +162,36 @@ const template = f`
         <div $width: 800px $margin: "0 auto" $marginTop: 50px>
             <Reactivity />
         </div>
-        <Accordion sections: {{ [{
-            title: "Jason",
-            content: "Jason is a firefighter"
-        },
-        {
-            title: "Annie",
-            content: "Annie is a thief"
-        },
-        {
-            title: "Jerome",
-            content: "Jerome is a racer"
-        }] }} />
+        <div $width: 800px $margin: "0 auto" $marginTop: 50px>
+            <h3> Loops </h3>
+            <Accordion sections: {{sections}} />
+        </div>
     </div>
 `
 
 import [Reactivity] : "../Reactivity/Reactivity"
 import [Accordion] : "../Accordion/Accordion"
 
+const t = "JAMAMA"
+
 const data = {
-    title: "Welcome to Whirlwind"
+    title: "Welcome to Whirlwind",
+    sections: [{
+        title: "Jason",
+        content: "Jason is a firefighter"
+    },
+    {
+        title: "Annie",
+        content: "Annie is a thief"
+    },
+    {
+        title: "Jerome",
+        content: "Jerome is a racer"
+    },
+    {
+        title: t,
+        content: "Bloopidy"
+    }]
 }
 
 const components = {
@@ -192,10 +202,19 @@ const components = {
 const methods = (data) => ({
     init: () => {
         println("Hello, I'll show up in the console when this component is loaded :)")
+        // println(data.comp)
     }
 })
 
-const App = component(template, data, methods, components)import [component, emit_event] : "../../lib/whirlwind"
+const App = component(template, data, methods, components)import [component] : "../../lib/whirlwind"
+
+const template = `
+<div>
+    <button> TEST </button>
+</div>
+`
+
+const Button = component(template)import [component, emit_event] : "../../lib/whirlwind"
 
 const template = `
 
@@ -423,6 +442,10 @@ import json
 import random
 import [forEach, map] : functional
 import [substring, trim, split, replaceAll, contains, startsWith] : string
+
+const uuid = () => {
+    return string(math.abs(random.rand()))
+}
 
 const __script_event_stringify = "globalThis._event = JSON.stringify({
     type: e.type,
@@ -1221,7 +1244,7 @@ const extractProperties = (elem) => {
             index += 1
             var event_type = ""
             var func_name = ""
-            while (elem_type[index] != ":") {
+            while (elem_type[index] != ":" and elem_type[index] != "=") {
                 event_type += elem_type[index]
                 index += 1
                 if (!elem_type[index] or elem_type[index] == ">") {
@@ -1289,7 +1312,7 @@ const extractProperties = (elem) => {
             index += 1
             var style_type = ""
             var style_value = ""
-            while (elem_type[index] != ":") {
+            while (elem_type[index] != ":" and elem_type[index] != "=") {
                 style_type += elem_type[index]
                 index += 1
                 if (!elem_type[index] or elem_type[index] == ">") {
@@ -1357,7 +1380,7 @@ const extractProperties = (elem) => {
             index += 1
             var inner_type = ""
             var inner_value = ""
-            while (elem_type[index] != ":") {
+            while (elem_type[index] != ":" and elem_type[index] != "=") {
                 inner_type += elem_type[index]
                 index += 1
                 if (!elem_type[index] or elem_type[index] == ">") {
@@ -1437,7 +1460,7 @@ const extractProperties = (elem) => {
         else if (alpha.contains(elem_type[index]) or elem_type[index] == "_") {
             var prop_name = ""
             var prop_value = ""
-            while (elem_type[index] != ":") {
+            while (elem_type[index] != ":" and elem_type[index] != "=") {
                 prop_name += elem_type[index]
                 index += 1
                 if (!elem_type[index] or elem_type[index] == ">") {
@@ -1610,10 +1633,12 @@ const new_element = (tag, data, dep, config, is_custom, components, props, colle
 
     if (is_custom) {
         const comp = components[tag.name]
+        println(components)
         if (!comp) {
-            println(f"Warning: No such component '${tag.name}'" )
+            println(f"Warning: No such component '${tag.name}'")
+        } else {
+            e = comp(props.props, data)
         }
-        e = comp(props.props)
     } else {
        e = element(config)
     }
@@ -1628,11 +1653,15 @@ const new_element = (tag, data, dep, config, is_custom, components, props, colle
 
 const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, components = {}) => {
 
+    // if (!data.__id) {
+    //     data.__id = uuid()
+    // }
+
     var looped_elements = []
 
-    methods = methods(data)
-
     data.props = custom
+
+    methods = methods(data)
 
     var tags;
 
@@ -1643,6 +1672,19 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         tags = html
     }
 
+    if (methods.setup) {
+        methods.setup()
+    }
+
+    // We need the parent data merged in
+    // So that we can more naturally put dynamic props in the parent
+    // When creating a custom element
+    // ie: <CustonElement title: {{ title }} />
+    // title is evaluated here, inside the custom component, not in the parent
+    // So to avoid something ugly like: <CustonElement title: {{ __parent.title }} />
+    // we merge the parent data in for the props evaluation
+    const __data_parent_merged = {...data, ...data.__parent}
+
     // Eval the props coming in
 
     if (data.props.info().keys.length() > 0) {
@@ -1651,7 +1693,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 continue
             }
             data.props._dynamic_raw[val] = data.props[val]
-            data.props[val] = eval(data.props[val], data)
+            data.props[val] = eval(data.props[val], __data_parent_merged)
         }
     }
 
@@ -2077,6 +2119,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         dependencies.append(list)
 
         const methods_copy = copy(methods)
+        methods_copy.remove_prop("setup")
         methods_copy.remove_prop("before")
         methods_copy.remove_prop("init")
 
@@ -2092,8 +2135,6 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 var tags = elem.children
                 var e = createElement(tags, data, (data) => methods_copy, custom, components)
                 wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
-
-                // data.remove_prop(iterator)
 
                 if (current_iterator_variable) {
                     data[iterator] = current_iterator_variable
@@ -2117,15 +2158,12 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
 
-            println(e)
-
             data[list].forEach((v) => {
                 data[iterator] = v
                 var tags = elem.children
                 var e = createElement(tags, data, (data) => methods_copy, custom, components)
                 wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
 
-                // data.remove_prop(iterator)
 
                 if (current_iterator_variable) {
                     data[iterator] = current_iterator_variable
@@ -2150,8 +2188,9 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 }
 
 const component = (html, data = {}, methods = (data) => ({}), components = {}) => {
-    return const component_create = (props = {}) => {
-        var _data = copy(data)
+    return const component_create = (props = {}, extra_data = {}) => {
+        var _data = {...copy(data), __parent: extra_data}
+        _data.__id = uuid()
         return createElement(html, _data, methods, props, components)
     }
 }import [component] : "lib/whirlwind"
