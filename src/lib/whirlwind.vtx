@@ -771,7 +771,7 @@ const extractProperties = (elem) => {
         }
     }
     var index = 0
-    var id = None;
+    var _id = None;
     var events = {
         _dynamic: [],
         _dynamic_raw: {},
@@ -791,13 +791,13 @@ const extractProperties = (elem) => {
     const elem_type = elem.type.substring(1, elem.type.length()).trim().substring(elem.name.length(), elem.type.length())
     while (elem_type[index]) {
         if (elem_type[index] == "#") {
-            id = ""
+            _id = ""
             index += 1
             while (true) {
                 if (elem_type[index].is_whitespace() or elem_type[index] == ">") {
                     break;
                 }
-                id += elem_type[index]
+                _id += elem_type[index]
                 index += 1
             }
         }
@@ -1090,7 +1090,7 @@ const extractProperties = (elem) => {
     }
 
     return {
-        id: id,
+        id: _id,
         events: events,
         styles: styles,
         props: props,
@@ -1195,7 +1195,6 @@ const new_element = (tag, data, dep, config, is_custom, components, props, colle
 
     if (is_custom) {
         const comp = components[tag.name]
-        println(components)
         if (!comp) {
             println(f"Warning: No such component '${tag.name}'")
         } else {
@@ -1248,15 +1247,26 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
     const __data_parent_merged = {...data, ...data.__parent}
 
     // Eval the props coming in
-
     if (data.props.info().keys.length() > 0) {
-        for (data.props._dynamic, index, val) {
+        data.props._dynamic.forEach((val, index) => {
             if (data.props[val].type() != "String") {
-                continue
+                return
             }
             data.props._dynamic_raw[val] = data.props[val]
+            // println(val)
+            // println(__data_parent_merged)
             data.props[val] = eval(data.props[val], __data_parent_merged)
-        }
+            if (data.__parent[val]) {
+                data.__parent[val]::onChange((e) => {
+                    if (data[val]) {
+                        data[val] = e.current
+                        if (methods.init) {
+                            methods.init()
+                        }
+                    }
+                })
+            }
+        })
     }
 
     var stack = []
@@ -1281,7 +1291,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
         var is_custom = upper.contains(tag.name[0])
         const props = tag.extractProperties();
-        const id = props.id;
+        const _id = props.id;
         var dependencies = []
 
         if (tag.is_start) {
@@ -1293,9 +1303,9 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
             dependencies = elem.dependencies
             var e = elem.element
 
-            if (id) {
-                wasm.run_script(f`document.getElementById("${e.id}").id = "${id}";`)
-                e.id = id
+            if (_id) {
+                wasm.run_script(f`document.getElementById("${e.id}").id = "${_id}";`)
+                e.id = _id
             }
 
             deps[string(i)] = []
@@ -1333,16 +1343,25 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     // We append to the end
                     if (last_stack_elem._children_section) {
                         wasm.run_script(f"document.getElementById(`${last_stack_elem._children_section.id}`).appendChild(document.getElementById(`${e.id}`));")
-                        id and (last_stack_elem._children_section[id] = e)
+                        _id and (last_stack_elem._children_section[_id] = e)
                     } else {
                         wasm.run_script(f"document.getElementById(`${last_stack_elem.id}`).appendChild(document.getElementById(`${e.id}`));")
-                        id and (last_stack_elem[id] = e)
+                        _id and (last_stack_elem[_id] = e)
                         }
                 } else {
                     var last_stack_elem = stack[stack.length() - 1]
                     last_stack_elem.children.append(e)
                     wasm.run_script(f"document.getElementById(`${last_stack_elem.id}`).appendChild(document.getElementById(`${e.id}`));")
-                    id and (last_stack_elem[id] = e)
+                    if (_id) {
+                        last_stack_elem[_id] = e
+                        // We'll add it to the flat list of named elements in the root so that it's easier to get to as well
+                        if (parent._named) {
+                            parent._named[_id] = e
+                        } else {
+                            parent._named = {}
+                            parent._named[_id] = e
+                        }
+                    }
                 }
             }
 
@@ -1373,263 +1392,266 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             var deps = []
 
-            var style_data = with_hook(data.copy(), (e) => {
-                var name = e.name
-                if (name.startsWith("data.")) {
-                    name = name.replaceAll("data.", "")
+            if (!collecting_for_children) {
+
+                var style_data = with_hook(data.copy(), (e) => {
+                    var name = e.name
+                    if (name.startsWith("data.")) {
+                        name = name.replaceAll("data.", "")
+                    }
+                    deps.append(name)
+                })
+
+                for (props.styles._dynamic, index, val) {
+                    props.styles._dynamic_raw[val] = props.styles[val]
+                    props.styles[val] = eval(props.styles[val], style_data)
                 }
-                deps.append(name)
-            })
 
-            for (props.styles._dynamic, index, val) {
-                props.styles._dynamic_raw[val] = props.styles[val]
-                props.styles[val] = eval(props.styles[val], style_data)
-            }
+                e.update({
+                    style: props.styles
+                })
 
-            e.update({
-                style: props.styles
-            })
+                // Handle dynamic events by making them a function
 
-            // Handle dynamic events by making them a function
-
-            for (props.events._dynamic, index, val) {
-                const s = props.events[val]
-                var fn;
-                if (e._data) {
-                    fn = () => eval(f`${s}`, {...data, ...e._data})
-                } else {
-                    fn = () => eval(f`${s}`, data)
-                }
-                props.events[val] = fn
-            }
-
-            // If we have events, we apply them here
-            props.events.info().keys.forEach((key) => {
-                const method_value = props.events[key]
-                var method;
-                if (method_value.type() == "String") {
-                    method = methods[method_value]
-                } else {
-                    method = method_value
-                }
-                var injected_method = method
-
-                if (method.info().arity == 1) {
-                    // Inject the parent here
-                    injected_method = () => method(parent)
-                }
-                if (!method) {
-                    println(f"No such method '${method_name}'")
-                    return
-                }
-                if (key == "input") {
-                    e.update({
-                        onInput: injected_method
-                    })
-                } else if (key == "click") {
-                    e.update({
-                        onClick: injected_method
-                    })
-                } else if (key == "click_self") {
-                    e.onClick = wasm.make_closure(injected_method)
-                    const script = f`
-                        const element = document.getElementById('${e.id}');
-                        element.onclick = function(e) {
-                            ${__script_event_stringify}
-                            if (e.target == element) {
-                                Module.ccall('vortex_eval','void',['number'],[${e.onClick}]);
-                            }
-                        };
-                    `
-                    wasm.run_script(script)
-                } else if (key == "blur") {
-                    e.update({
-                        onBlur: injected_method
-                    })
-                } else if (key == "change") {
-                    e.update({
-                        onChange: injected_method
-                    })
-                } else if (key == "enter") {
-                    e.update({
-                        onMouseEnter: injected_method
-                    })
-                } else if (key == "leave") {
-                    e.update({
-                        onMouseLeave: injected_method
-                    })
-                } else if (key == "over") {
-                    e.update({
-                        onMouseOver: injected_method
-                    })
-                } else if (key == "move") {
-                    e.update({
-                        onMouseMove: injected_method
-                    })
-                } else {
-                    // Add a custom event listener
-                    e[key] = wasm.make_closure(injected_method)
-                    wasm.run_script(f`
-                        document.getElementById("${e.id}").addEventListener("${key}", function(e) {
-                        ${__script_event_stringify}
-                        Module.ccall('vortex_eval','void',['number'],[${e[key]}]);
-                    });`)
-                }
-            })
-
-            // If we have props, we apply them here
-
-            deps = []
-
-            var prop_data = with_hook(data.copy(), (e) => {
-                var name = e.name
-                if (name == "data") {
-                    return
-                }
-                if (name.startsWith("data.")) {
-                    name = name.replaceAll("data.", "")
-                }
-                deps.append(name)
-            })
-
-            for (props.props._dynamic, index, val) {
-                if (props.props[val].type() != "String") {
-                    continue
-                }
-                props.props._dynamic_raw[val] = props.props[val]
-                props.props[val] = eval(props.props[val], prop_data)
-            }
-
-            if (props.props) {
-                e.update(props.props)
-            }
-
-            // If we have inner events, we apply them here
-
-            deps = []
-
-            var inner_data = with_hook(data.copy(), (e) => {
-                var name = e.name
-                if (name == "data") {
-                    return
-                }
-                if (name.startsWith("data.")) {
-                    name = name.replaceAll("data.", "")
-                }
-                deps.append(name)
-            })
-
-            for (props.inner._dynamic, index, val) {
-                props.inner._dynamic_raw[val] = props.inner[val]
-                props.inner[val] = eval(props.inner[val], inner_data)
-            }
-
-            props.inner.info().keys.forEach((key) => {
-                const value = props.inner[key]
-                if (key == "if") {
-                    if (value.type() == "String") {
-                        var predicate = data[value]
-                        const predicateOnChange = predicate.info().onChangeHook
-                        if (!predicate) {
-                            e.update({
-                                style: {
-                                    display: "none"
-                                }
-                            })
-                        }
-                        if (predicateOnChange) {
-                            data[value]::onChange((info) => {
-                                predicateOnChange(info)
-                                if (info.current) {
-                                    e.update({
-                                        style: {
-                                            display: ""
-                                        }
-                                    })
-                                } else {
-                                    e.update({
-                                        style: {
-                                            display: "none"
-                                        }
-                                    })
-                                }
-                            })
-                        } else {
-                            data[value]::onChange((info) => {
-                                if (info.current) {
-                                    e.update({
-                                        style: {
-                                            display: ""
-                                        }
-                                    })
-                                } else {
-                                    e.update({
-                                        style: {
-                                            display: "none"
-                                        }
-                                    })
-                                }
-                            })
-                        }
+                for (props.events._dynamic, index, val) {
+                    const s = props.events[val]
+                    var fn;
+                    if (e._data) {
+                        fn = () => eval(f`${s}`, {...data, ...e._data})
                     } else {
-                        if (!value) {
-                            e.update({
-                                style: {
-                                    display: "none"
+                        fn = () => eval(f`${s}`, data)
+                    }
+                    props.events[val] = fn
+                }
+
+                // If we have events, we apply them here
+                props.events.info().keys.forEach((key) => {
+                    const method_value = props.events[key]
+                    var method;
+                    if (method_value.type() == "String") {
+                        method = methods[method_value]
+                    } else {
+                        method = method_value
+                    }
+                    var injected_method = method
+
+                    if (method.info().arity == 1) {
+                        // Inject the parent here
+                        injected_method = () => method(parent)
+                    }
+                    if (!method) {
+                        println(f"No such method '${method_name}'")
+                        return
+                    }
+                    if (key == "input") {
+                        e.update({
+                            onInput: injected_method
+                        })
+                    } else if (key == "click") {
+                        e.update({
+                            onClick: injected_method
+                        })
+                    } else if (key == "click_self") {
+                        e.onClick = wasm.make_closure(injected_method)
+                        const script = f`
+                            const element = document.getElementById('${e.id}');
+                            element.onclick = function(e) {
+                                ${__script_event_stringify}
+                                if (e.target == element) {
+                                    Module.ccall('vortex_eval','void',['number'],[${e.onClick}]);
                                 }
+                            };
+                        `
+                        wasm.run_script(script)
+                    } else if (key == "blur") {
+                        e.update({
+                            onBlur: injected_method
+                        })
+                    } else if (key == "change") {
+                        e.update({
+                            onChange: injected_method
+                        })
+                    } else if (key == "enter") {
+                        e.update({
+                            onMouseEnter: injected_method
+                        })
+                    } else if (key == "leave") {
+                        e.update({
+                            onMouseLeave: injected_method
+                        })
+                    } else if (key == "over") {
+                        e.update({
+                            onMouseOver: injected_method
+                        })
+                    } else if (key == "move") {
+                        e.update({
+                            onMouseMove: injected_method
+                        })
+                    } else {
+                        // Add a custom event listener
+                        e[key] = wasm.make_closure(injected_method)
+                        wasm.run_script(f`
+                            document.getElementById("${e.id}").addEventListener("${key}", function(e) {
+                            ${__script_event_stringify}
+                            Module.ccall('vortex_eval','void',['number'],[${e[key]}]);
+                        });`)
+                    }
+                })
+
+                // If we have props, we apply them here
+
+                deps = []
+
+                var prop_data = with_hook(data.copy(), (e) => {
+                    var name = e.name
+                    if (name == "data") {
+                        return
+                    }
+                    if (name.startsWith("data.")) {
+                        name = name.replaceAll("data.", "")
+                    }
+                    deps.append(name)
+                })
+
+                for (props.props._dynamic, index, val) {
+                    if (props.props[val].type() != "String") {
+                        continue
+                    }
+                    props.props._dynamic_raw[val] = props.props[val]
+                    props.props[val] = eval(props.props[val], prop_data)
+                }
+
+                if (props.props) {
+                    e.update(props.props)
+                }
+
+                // If we have inner events, we apply them here
+
+                deps = []
+
+                var inner_data = with_hook(data.copy(), (e) => {
+                    var name = e.name
+                    if (name == "data") {
+                        return
+                    }
+                    if (name.startsWith("data.")) {
+                        name = name.replaceAll("data.", "")
+                    }
+                    deps.append(name)
+                })
+
+                for (props.inner._dynamic, index, val) {
+                    props.inner._dynamic_raw[val] = props.inner[val]
+                    props.inner[val] = eval(props.inner[val], inner_data)
+                }
+
+                props.inner.info().keys.forEach((key) => {
+                    const value = props.inner[key]
+                    if (key == "if") {
+                        if (value.type() == "String") {
+                            var predicate = data[value]
+                            const predicateOnChange = predicate.info().onChangeHook
+                            if (!predicate) {
+                                e.update({
+                                    style: {
+                                        display: "none"
+                                    }
+                                })
+                            }
+                            if (predicateOnChange) {
+                                data[value]::onChange((info) => {
+                                    predicateOnChange(info)
+                                    if (info.current) {
+                                        e.update({
+                                            style: {
+                                                display: ""
+                                            }
+                                        })
+                                    } else {
+                                        e.update({
+                                            style: {
+                                                display: "none"
+                                            }
+                                        })
+                                    }
+                                })
+                            } else {
+                                data[value]::onChange((info) => {
+                                    if (info.current) {
+                                        e.update({
+                                            style: {
+                                                display: ""
+                                            }
+                                        })
+                                    } else {
+                                        e.update({
+                                            style: {
+                                                display: "none"
+                                            }
+                                        })
+                                    }
+                                })
+                            }
+                        } else {
+                            if (!value) {
+                                e.update({
+                                    style: {
+                                        display: "none"
+                                    }
+                                })
+                            }
+
+                            deps.forEach((dep_val, dep_index) => {
+                                set_prop_hook(data, dep_val, (info) => {
+                                    if (e._data) {
+                                        _data = {...e._data, ...inner_data}
+                                    }
+
+                                    _data[dep_val] = info.current
+
+                                    var res = eval(props.inner._dynamic_raw[key], _data)
+                                    
+                                    if (res) {
+                                        e.update({
+                                            style: {
+                                                display: ""
+                                            }
+                                        })
+                                    } else {
+                                        e.update({
+                                            style: {
+                                                display: "none"
+                                            }
+                                        })
+                                    }
+                                })
                             })
                         }
-
-                        deps.forEach((dep_val, dep_index) => {
-                            set_prop_hook(data, dep_val, (info) => {
-                                if (e._data) {
-                                    _data = {...e._data, ...inner_data}
-                                }
-
-                                _data[dep_val] = info.current
-
-                                var res = eval(props.inner._dynamic_raw[key], _data)
-                                
-                                if (res) {
-                                    e.update({
-                                        style: {
-                                            display: ""
-                                        }
-                                    })
-                                } else {
-                                    e.update({
-                                        style: {
-                                            display: "none"
-                                        }
-                                    })
-                                }
-                            })
-                        })
                     }
-                }
-                if (key == "for") {
-                    // println("FOUND FOR - ", i)
-                    collecting_for_children = true
-                    e.__is_for = true
-                    var value = props.inner[key]
-                    if (value.trim() == "") {
-                        error("Malformed for loop")
+                    if (key == "for") {
+                        // println("FOUND FOR - ", i)
+                        collecting_for_children = true
+                        e.__is_for = true
+                        var value = props.inner[key]
+                        if (value.trim() == "") {
+                            error("Malformed for loop")
+                        }
+                        var values = value.split(",").map((e) => e.trim())
+                        var current_parent = stack[stack.length() - 1]
+
+                        var t = tag
+                        t.type = t.type.replaceAll("%for", "%__for")
+
+                        looped_elements.append({
+                            element: e,
+                            tag: tag,
+                            values: values,
+                            current_parent: current_parent,
+                            children: [t]
+                        })  
                     }
-                    var values = value.split(",").map((e) => e.trim())
-                    var current_parent = stack[stack.length() - 1]
-
-                    var t = tag
-                    t.type = t.type.replaceAll("%for", "%__for")
-
-                    looped_elements.append({
-                        element: e,
-                        tag: tag,
-                        values: values,
-                        current_parent: current_parent,
-                        children: [t]
-                    })  
-                }
-            })
+                })
+            }
 
             if (!tag.self_ending and is_custom) {
                 e.customName = tag.name

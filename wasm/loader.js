@@ -180,6 +180,6 @@ Module['FS_createPath']("/src", "resources", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/src/components/Accordion/Accordion.vtx", "start": 0, "end": 2785}, {"filename": "/src/components/App/App.vtx", "start": 2785, "end": 5861}, {"filename": "/src/components/Button/Button.vtx", "start": 5861, "end": 6002}, {"filename": "/src/components/Modal/Modal.vtx", "start": 6002, "end": 7131}, {"filename": "/src/components/Reactivity/Reactivity.vtx", "start": 7131, "end": 12606}, {"filename": "/src/lib/whirlwind.vtx", "start": 12606, "end": 69323}, {"filename": "/src/main.vtx", "start": 69323, "end": 69845}, {"filename": "/src/resources/cat.jpg", "start": 69845, "end": 122863}, {"filename": "/src/resources/loader.gif", "start": 122863, "end": 195054}], "remote_package_size": 195054});
+    loadPackage({"files": [{"filename": "/src/components/Accordion/Accordion.vtx", "start": 0, "end": 2359}, {"filename": "/src/components/App/App.vtx", "start": 2359, "end": 6240}, {"filename": "/src/components/Button/Button.vtx", "start": 6240, "end": 6381}, {"filename": "/src/components/Modal/Modal.vtx", "start": 6381, "end": 7510}, {"filename": "/src/components/Reactivity/Reactivity.vtx", "start": 7510, "end": 12985}, {"filename": "/src/lib/whirlwind.vtx", "start": 12985, "end": 71536}, {"filename": "/src/main.vtx", "start": 71536, "end": 72058}, {"filename": "/src/resources/cat.jpg", "start": 72058, "end": 125076}, {"filename": "/src/resources/loader.gif", "start": 125076, "end": 197267}], "remote_package_size": 197267});
 
   })();

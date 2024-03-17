@@ -30,7 +30,7 @@ const template = f`
     }
 
     #title {
-        background-image: url("https://media.giphy.com/media/l378erJRv2o46Pmi4/giphy.gif");
+        background-image: url("https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHVmZDJlbGlyYmgwM2l6dmZiZGRzNDA2aTMyZ2FmOTY5b3ZyZW12YyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7SKOwf1nD6j6XhfLMG/giphy.gif");
         font-family: "Madimi One", sans-serif;
         color: transparent;
         -moz-background-clip: text;
@@ -68,9 +68,18 @@ const template = f`
         <div $width: 800px $margin: "0 auto" $marginTop: 50px>
             <Reactivity />
         </div>
-        <div $width: 800px $margin: "0 auto" $marginTop: 50px>
+        <div #loopsDiv $width: 800px $margin: "0 auto" $marginTop: 50px>
             <h3> Loops </h3>
             <Accordion sections: {{sections}} />
+            <div #newTitleDiv>
+                <label $color: white $paddingRight: 10px> Title: </label> 
+                <input #newTitle defaultValue: "New Title" />
+            </div>
+            <div #newContentDiv>
+                <label $color: white $paddingRight: 10px> Content: </label> 
+                <textarea #newContent defaultValue: "New Content" rows="3" cols="50" />
+            </div>
+            <button className: btn @click: addSection $backgroundColor: orange> Add Section </button>
         </div>
     </div>
 `
@@ -78,26 +87,24 @@ const template = f`
 import [Reactivity] : "../Reactivity/Reactivity"
 import [Accordion] : "../Accordion/Accordion"
 
-const t = "JAMAMA"
-
 const data = {
     title: "Welcome to Whirlwind",
     sections: [{
         title: "Jason",
-        content: "Jason is a firefighter"
+        content: "Jason is a firefighter",
+        color: "blue"
     },
     {
         title: "Annie",
-        content: "Annie is a thief"
+        content: "Annie is a thief",
+        color: "red"
     },
     {
         title: "Jerome",
-        content: "Jerome is a racer"
+        content: "Jerome is a pilot",
+        color: "green"
     },
-    {
-        title: t,
-        content: "Bloopidy"
-    }]
+]
 }
 
 const components = {
@@ -108,7 +115,13 @@ const components = {
 const methods = (data) => ({
     init: () => {
         println("Hello, I'll show up in the console when this component is loaded :)")
-        // println(data.comp)
+    },
+    addSection: (parent) => {
+        data.sections.append({
+            title: parent._named.newTitle.value(),
+            content: parent._named.newContent.value(),
+            color: "black"
+        })
     }
 })
 
