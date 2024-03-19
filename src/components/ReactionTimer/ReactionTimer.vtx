@@ -28,6 +28,18 @@ const template = `
         padding: 100px 0;
         margin: 40px auto;
     }
+
+    .btn {
+        padding: 10px;
+        margin: 5px;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease-in-out;
+    }
 </style>
 
 <div>
@@ -41,6 +53,9 @@ const template = `
     <select #catSelector @change: handleSelect multiple: true>
         <option %for: "breeds, breed" value: {{ breed.id }}> {{ breed.name }} </option>
     </select>
+    <div>
+        <button className: btn $backgroundColor: green %for: "selectedBreeds, breed" key: {{ breed.id }} @click: {{ println(breed.id) }}> {{ breed.name }} </button>
+    </div>
 </div>
 `
 
@@ -49,11 +64,7 @@ const data = {
     timer: 0,
     interval: None,
     breeds: [],
-    name: "",
-    check: {
-        isOld: false,
-        isDying: false
-    },
+    selectedBreeds: [],
     getResult: (t) => {
         if (t <= 300) {
             return "good"
@@ -94,19 +105,9 @@ const methods = (data) => ({
         parent.block.hide()
         parent.results.show()
     },
-    updateName: () => {
-        data.name = event().target.value
-    },
-    updateCheck: () => {
-        data.check[event().target.name] = event().target.checked
-    },
     handleSelect: (parent) => {
-        const indices = event().target.selectedIndices
-        var values = []
-        for (indices, i, v) {
-            values.append(data.breeds[i].name)
-        }
-        println(values)
+        const values = event().target.selectedIndices.map((i) => data.breeds[i])
+        data.selectedBreeds = values
     }
 })
 

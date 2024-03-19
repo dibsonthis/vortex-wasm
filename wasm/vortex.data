@@ -304,6 +304,18 @@ const template = `
         padding: 100px 0;
         margin: 40px auto;
     }
+
+    .btn {
+        padding: 10px;
+        margin: 5px;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease-in-out;
+    }
 </style>
 
 <div>
@@ -317,6 +329,9 @@ const template = `
     <select #catSelector @change: handleSelect multiple: true>
         <option %for: "breeds, breed" value: {{ breed.id }}> {{ breed.name }} </option>
     </select>
+    <div>
+        <button className: btn $backgroundColor: green %for: "selectedBreeds, breed, i" key: {{ breed.id }} @click: {{ println(breed.id) }}> {{ breed.name }} - {{ i }} </button>
+    </div>
 </div>
 `
 
@@ -325,11 +340,7 @@ const data = {
     timer: 0,
     interval: None,
     breeds: [],
-    name: "",
-    check: {
-        isOld: false,
-        isDying: false
-    },
+    selectedBreeds: [],
     getResult: (t) => {
         if (t <= 300) {
             return "good"
@@ -370,19 +381,9 @@ const methods = (data) => ({
         parent.block.hide()
         parent.results.show()
     },
-    updateName: () => {
-        data.name = event().target.value
-    },
-    updateCheck: () => {
-        data.check[event().target.name] = event().target.checked
-    },
     handleSelect: (parent) => {
-        const indices = event().target.selectedIndices
-        var values = []
-        for (indices, i, v) {
-            values.append(data.breeds[i].name)
-        }
-        println(values)
+        const values = event().target.selectedIndices.map((i) => data.breeds[i])
+        data.selectedBreeds = values
     }
 })
 
@@ -647,7 +648,7 @@ const __script_event_stringify = "globalThis._event = JSON.stringify({
         checked: e?.target?.checked,
         name: e?.target?.name,
         selectedIndex: e?.target?.selectedIndex,
-        selectedIndices: Object.keys(e?.target?.selectedOptions)?.map((k) => parseInt(k))
+        selectedIndices: Array.from(e?.target?.selectedOptions ?? []).map(option => option?.index)
     },
     data: e?.detail?.data
 });"
@@ -717,7 +718,7 @@ const enable = (elem) => {
 import math
 import json
 import random
-import [forEach, map] : functional
+import [forEach, map, filter] : functional
 import [substring, trim, split, replaceAll, contains, startsWith] : string
 import [
     setTimeOut,
@@ -859,7 +860,6 @@ type element = (config = {}, parent = None) => {
         if (key == "onChange") {
             elem.onChange = wasm.make_closure(config[key])
             script += f"_elem.onchange = function(e) {
-                console.log(e);
                 ${__script_event_stringify}
                 Module.ccall('vortex_eval','void',['number'],[${elem.onChange}]);
             };"
@@ -1025,7 +1025,6 @@ type element = (config = {}, parent = None) => {
                     }
                     this.onChange = wasm.make_closure(data[key])
                     script += f"_elem.onchange = function(e) {
-                        console.log(e);
                         ${__script_event_stringify}
                         Module.ccall('vortex_eval','void',['number'],[${this.onChange}]);
                     };"
@@ -2231,6 +2230,9 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                         }
                         props.props._dynamic_raw[val] = props.props[val]
                         props.props[val] = eval(props.props[val], prop_data)
+                        if (val == "key") {
+                            e.key = props.props[val]
+                        }
                     }
                 }
 
@@ -2361,7 +2363,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                             values: values,
                             current_parent: current_parent,
                             children: [t]
-                        })  
+                        })
                     }
                 })
             }
@@ -2411,11 +2413,9 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
     
     looped_elements.forEach((elem, index) => {
         var dependencies = []
-        const container = elem.current_parent
+        var container = elem.current_parent
         const list = elem.values[0]
         dependencies.append(list)
-
-        println(container.id)
 
         const methods_copy = copy(methods)
         methods_copy.remove_prop("setup")
@@ -2435,6 +2435,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
             const current_iterator_variable = data[iterator]
 
+            container.children = []
             wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
 
             data[list].forEach((v) => {
@@ -2442,6 +2443,7 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 var tags = elem.children
                 var e = createElement(tags, data, (data) => methods_copy, custom, components)
                 wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+                container.children.append(e)
 
                 if (current_iterator_variable) {
                     data[iterator] = current_iterator_variable
@@ -2481,42 +2483,133 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
 
         const current_onchange = data[list].info().onChangeHook
 
+        const contains = (ls, val) => {
+            for (ls, i, v) {
+                if (v == val) {
+                    return true
+                }
+            }
+            return false
+        }
+
         data[list]::onChange((e) => {
+
+            const old = e.old.map((e) => e.id)
+            const curr = e.current.map((e) => e.id)
+            var added_indices = []
+            const added = curr.filter((e, i) => {
+                if (!old.contains(e)) {
+                    added_indices.append(i)
+                    return true
+                }
+                return false
+            })
+            const removed = old.filter((e) => !curr.contains(e))
 
             if (current_onchange) {
                 current_onchange(e)
             }
 
-            println(container.id)
-
             if (elem.values.length() == 1) {
-                wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+                // wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
     
-                data[list].forEach((v) => {
-                    var tags = elem.children
-                    var e = createElement(tags, data, (data) => methods_copy, custom, components)
-                    wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
-                })
+                // data[list].forEach((v) => {
+                //     var tags = elem.children
+                //     var e = createElement(tags, data, (data) => methods_copy, custom, components)
+                //     wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+                // })
+
+                if (removed.length() > 0) {
+                    removed.forEach((key) => {
+                        wasm.run_script(f"
+                        const container = document.getElementById('${container.id}');
+                        const elements = container.querySelectorAll('*');
+                        elements.forEach(element => {
+                            if (element.key === '${key}') {
+                                element.remove();
+                            }
+                        });")
+                    })
+                }
+
+                if (added.length() > 0) {
+                    added.forEach((key, i) => {
+                        var added_index = added_indices[i]
+                        data[list].forEach((v) => {
+                            if (v.id != key) {
+                                return
+                            }
+
+                            var tags = elem.children
+                            var e = createElement(tags, data, (data) => methods_copy, custom, components)
+                            wasm.run_script(f"
+                            const container = document.getElementById('${container.id}');
+                            container.insertBefore(document.getElementById('${e.id}'), container.children[${added_index}]);")
+                        })
+                    })
+                }
             } else if (elem.values.length() == 2) {
                 var iterator = elem.values[1].trim()
-    
                 const current_iterator_variable = data[iterator]
+
+                if (removed.length() > 0) {
+                    removed.forEach((key) => {
+                        wasm.run_script(f"
+                        const container = document.getElementById('${container.id}');
+                        const elements = container.querySelectorAll('*');
+                        elements.forEach(element => {
+                            if (element.key === '${key}') {
+                                element.remove();
+                            }
+                        });")
+                    })
+                }
+
+                if (added.length() > 0) {
+                    added.forEach((key, i) => {
+                        var added_index = added_indices[i]
+                        data[list].forEach((v) => {
+                            if (v.id != key) {
+                                return
+                            }
+
+                            data[iterator] = v
+                            var tags = elem.children
+                            var e = createElement(tags, data, (data) => methods_copy, custom, components)
+                            wasm.run_script(f"
+                            const container = document.getElementById('${container.id}');
+                            container.insertBefore(document.getElementById('${e.id}'), container.children[${added_index}]);")
+            
+                            if (current_iterator_variable) {
+                                data[iterator] = current_iterator_variable
+                            } else {
+                                data.remove_prop(iterator)
+                            }
+                        })
+                    })
+                }
+
+                // wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+                // container.children = []
     
-                wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
+                // data[list].forEach((v) => {
+                //     data[iterator] = v
+                //     var tags = elem.children
+                //     var e = createElement(tags, data, (data) => methods_copy, custom, components)
+                //     wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
+                //     container.children.append(e)
     
-                data[list].forEach((v) => {
-                    data[iterator] = v
-                    var tags = elem.children
-                    var e = createElement(tags, data, (data) => methods_copy, custom, components)
-                    wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
-    
-                    if (current_iterator_variable) {
-                        data[iterator] = current_iterator_variable
-                    } else {
-                        data.remove_prop(iterator)
-                    }
-                })
+                //     if (current_iterator_variable) {
+                //         data[iterator] = current_iterator_variable
+                //     } else {
+                //         data.remove_prop(iterator)
+                //     }
+                // })
             } else if (elem.values.length() == 3) {
+
+                // If we expose the index, we need to recreate the entire container
+                // To maintain order of indices
+                
                 var iterator = elem.values[1].trim()
                 var index_var = elem.values[2].trim()
     

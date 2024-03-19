@@ -17,7 +17,7 @@ const __script_event_stringify = "globalThis._event = JSON.stringify({
         checked: e?.target?.checked,
         name: e?.target?.name,
         selectedIndex: e?.target?.selectedIndex,
-        selectedIndices: Object.keys(e?.target?.selectedOptions)?.map((k) => parseInt(k))
+        selectedIndices: Array.from(e?.target?.selectedOptions ?? []).map(option => option?.index)
     },
     data: e?.detail?.data
 });"
