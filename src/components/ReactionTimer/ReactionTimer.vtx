@@ -1,0 +1,113 @@
+import [
+    component, 
+    setTimeOut, 
+    setInterval, 
+    clearInterval, 
+    hide, 
+    show, 
+    enable, 
+    disable, 
+    event, 
+    value, 
+    fetch
+] : "../../lib/whirlwind"
+
+import random
+import json
+import [map] : functional
+
+const template = `
+
+<style>
+    .block {
+        width: 400px;
+        border-radius: 20px;
+        background: #0faf87;
+        color: white;
+        text-align: center;
+        padding: 100px 0;
+        margin: 40px auto;
+    }
+</style>
+
+<div>
+    <button className: btn $color: green #start @click: start> Play </button>
+    <div @click: stop $display: none $cursor: pointer #block>
+        <div className="block">
+            Click me
+        </div>
+    </div>
+    <p #results $display: none> Your time was {{ timer }} ms, which is {{ getResult(timer) }} </p>
+    <select #catSelector @change: handleSelect multiple: true>
+        <option %for: "breeds, breed" value: {{ breed.id }}> {{ breed.name }} </option>
+    </select>
+</div>
+`
+
+const data = {
+    delay: 3443,
+    timer: 0,
+    interval: None,
+    breeds: [],
+    name: "",
+    check: {
+        isOld: false,
+        isDying: false
+    },
+    getResult: (t) => {
+        if (t <= 300) {
+            return "good"
+        } else if (t <= 500) {
+            return "average"
+        } else {
+            return "terrible"
+        }
+    }
+}
+
+const methods = (data) => ({
+    init: (parent) => {
+        const api_key = "live_zHbEWQ3nQu77w2E06tbkSKsVj49Gr5DMY6B8jobyZ5wyDnPO0vkfJ8t7A6nbPa0m"
+        fetch.get("https://api.thecatapi.com/v1/breeds", (breeds) => {
+            data.breeds = json.parse(breeds)
+        }, (data) => println("Failed"), {
+            "x-api-key": api_key
+        })  
+    },
+    start: (parent) => {
+        data.timer = 0
+        parent.start.disable()
+        parent.block.hide()
+        parent.results.hide()
+        data.delay = 2000 + random.rand_range(1000, 5000)
+        setTimeOut(() => {
+            parent.start.enable()
+            parent.block.show()
+            data.interval = setInterval(() => {
+                data.timer += 10
+            }, 10)
+        }, data.delay)
+        data.name = "starting..."
+    },
+    stop: (parent) => {
+        clearInterval(data.interval)
+        parent.block.hide()
+        parent.results.show()
+    },
+    updateName: () => {
+        data.name = event().target.value
+    },
+    updateCheck: () => {
+        data.check[event().target.name] = event().target.checked
+    },
+    handleSelect: (parent) => {
+        const indices = event().target.selectedIndices
+        var values = []
+        for (indices, i, v) {
+            values.append(data.breeds[i].name)
+        }
+        println(values)
+    }
+})
+
+const ReactionTimer = component(template, data, methods)

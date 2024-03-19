@@ -4,28 +4,20 @@ import json
 import random
 import [forEach, map] : functional
 import [substring, trim, split, replaceAll, contains, startsWith] : string
+import [
+    setTimeOut,
+    setInterval,
+    clearInterval,
+    __script_event_stringify,
+    show,
+    hide,
+    enable,
+    disable
+] : "whirlwind-helpers"
 
 const uuid = () => {
     return string(math.abs(random.rand()))
 }
-
-const __script_event_stringify = "globalThis._event = JSON.stringify({
-    type: e.type,
-    clientX: e.clientX,
-    clientY: e.clientY,
-    ctrlKey: e.ctrlKey,
-    altKey: e.altKey,
-    shiftKey: e.shiftKey,
-    x: e.x,
-    y: e.y,
-    fromElement: {
-        id: e?.fromElement?.id
-    },
-    target: {
-        value: e.target?.value
-    },
-    data: e.detail?.data
-});"
 
 const get_property = (obj, prop) => {
     var _prop = prop.split(".")
@@ -152,6 +144,7 @@ type element = (config = {}, parent = None) => {
         if (key == "onChange") {
             elem.onChange = wasm.make_closure(config[key])
             script += f"_elem.onchange = function(e) {
+                console.log(e);
                 ${__script_event_stringify}
                 Module.ccall('vortex_eval','void',['number'],[${elem.onChange}]);
             };"
@@ -317,6 +310,7 @@ type element = (config = {}, parent = None) => {
                     }
                     this.onChange = wasm.make_closure(data[key])
                     script += f"_elem.onchange = function(e) {
+                        console.log(e);
                         ${__script_event_stringify}
                         Module.ccall('vortex_eval','void',['number'],[${this.onChange}]);
                     };"
@@ -405,7 +399,11 @@ type element = (config = {}, parent = None) => {
                     // We need to deal with children AFTER this element has been created
                     continue;
                 }
-                script += f"_elem.${key} = `${data[key]}`;"
+                if (data[key].type() == "Boolean" or data[key].type() == "Number") {
+                    script += f"_elem.${key} = ${data[key]};"
+                } else {
+                    script += f"_elem.${key} = `${data[key]}`;"
+                }
             }
 
             wasm.run_script(script);
@@ -1159,7 +1157,6 @@ const parseContent = (content, data = {}) => {
     }
 
     variables.forEach((var, i) => {
-        // new_content = new_content.replaceAll(substrings[i], string(data[var]))
         new_content = new_content.replaceAll(substrings[i], string(eval(var, data)))
     })
 
@@ -1184,7 +1181,7 @@ const new_element = (tag, data, dep, config, is_custom, components, props, colle
             }
         })
 
-        if (!collecting_for_children) {
+        if (!collecting_for_children and !props.inner["for"]) {
             const parsed_content = tag.content.parseContent(data)
             config.innerHTML = parsed_content.content
             dependencies = dep and dep or []
@@ -1213,10 +1210,6 @@ const new_element = (tag, data, dep, config, is_custom, components, props, colle
 }
 
 const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, components = {}) => {
-
-    // if (!data.__id) {
-    //     data.__id = uuid()
-    // }
 
     var looped_elements = []
 
@@ -1253,15 +1246,18 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 return
             }
             data.props._dynamic_raw[val] = data.props[val]
-            // println(val)
-            // println(__data_parent_merged)
             data.props[val] = eval(data.props[val], __data_parent_merged)
             if (data.__parent[val]) {
                 data.__parent[val]::onChange((e) => {
                     if (data[val]) {
                         data[val] = e.current
                         if (methods.init) {
-                            methods.init()
+                            const arity = methods.init.info().arity
+                            if (arity == 0) {
+                                methods.init()
+                            } else if (arity == 1) {
+                                methods.init(parent)
+                            }
                         }
                     }
                 })
@@ -1513,12 +1509,14 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     deps.append(name)
                 })
 
-                for (props.props._dynamic, index, val) {
-                    if (props.props[val].type() != "String") {
-                        continue
+                if (!props.inner["for"]) {
+                    for (props.props._dynamic, index, val) {
+                        if (props.props[val].type() != "String") {
+                            continue
+                        }
+                        props.props._dynamic_raw[val] = props.props[val]
+                        props.props[val] = eval(props.props[val], prop_data)
                     }
-                    props.props._dynamic_raw[val] = props.props[val]
-                    props.props[val] = eval(props.props[val], prop_data)
                 }
 
                 if (props.props) {
@@ -1702,14 +1700,12 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         const list = elem.values[0]
         dependencies.append(list)
 
+        println(container.id)
+
         const methods_copy = copy(methods)
         methods_copy.remove_prop("setup")
         methods_copy.remove_prop("before")
         methods_copy.remove_prop("init")
-
-        const ls = eval(list, data)
-
-        println(ls)
 
         if (elem.values.length() == 1) {
             wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
@@ -1776,6 +1772,8 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 current_onchange(e)
             }
 
+            println(container.id)
+
             if (elem.values.length() == 1) {
                 wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
     
@@ -1832,26 +1830,6 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     }
                 })
             }
-
-            // var iterator = elem.values[1].trim()
-
-            // const current_iterator_variable = data[iterator]
-
-            // wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
-
-            // data[list].forEach((v) => {
-            //     data[iterator] = v
-            //     var tags = elem.children
-            //     var e = createElement(tags, data, (data) => methods_copy, custom, components)
-            //     wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
-
-
-            //     if (current_iterator_variable) {
-            //         data[iterator] = current_iterator_variable
-            //     } else {
-            //         data.remove_prop(iterator)
-            //     }
-            // })
         })
     })
 

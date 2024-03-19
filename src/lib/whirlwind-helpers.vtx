@@ -1,0 +1,86 @@
+import wasm
+
+const __script_event_stringify = "globalThis._event = JSON.stringify({
+    type: e?.type,
+    clientX: e?.clientX,
+    clientY: e?.clientY,
+    ctrlKey: e?.ctrlKey,
+    altKey: e?.altKey,
+    shiftKey: e?.shiftKey,
+    x: e?.x,
+    y: e?.y,
+    fromElement: {
+        id: e?.fromElement?.id
+    },
+    target: {
+        value: e?.target?.value,
+        checked: e?.target?.checked,
+        name: e?.target?.name,
+        selectedIndex: e?.target?.selectedIndex,
+        selectedIndices: Object.keys(e?.target?.selectedOptions)?.map((k) => parseInt(k))
+    },
+    data: e?.detail?.data
+});"
+
+const setTimeOut = (func, ms = 1000) => {
+    const fn = wasm.make_closure(func)
+    wasm.run_script(f`
+        var func = (e) => {
+            ${__script_event_stringify}
+            Module.ccall('vortex_eval','void',['number'],[${fn}]);
+        };
+
+        setTimeout(() => {
+            func();
+          }, ${ms});
+    `)
+}
+
+const setInterval = (func, ms = 1000) => {
+    const fn = wasm.make_closure(func)
+    const interval = wasm.run_script_string(f`
+        var func = (e) => {
+            ${__script_event_stringify}
+            Module.ccall('vortex_eval','void',['number'],[${fn}]);
+        };
+
+        setInterval(() => {
+            func();
+          }, ${ms});
+    `)
+    return interval
+}
+
+const clearInterval = (interval_id) => {
+    wasm.run_script(f`
+        clearInterval(${interval_id});
+    `)
+}
+
+const hide = (elem) => {
+    elem.update({
+        style: {
+            display: "none"
+        }
+    })
+}
+
+const show = (elem) => {
+    elem.update({
+        style: {
+            display: "block"
+        }
+    })
+}
+
+const disable = (elem) => {
+    elem.update({
+        disabled: true
+    })
+}
+
+const enable = (elem) => {
+    elem.update({
+        disabled: false
+    })
+}

@@ -1,9 +1,0 @@
-import [component] : "../../lib/whirlwind"
-
-const template = `
-<div>
-    <button> TEST </button>
-</div>
-`
-
-const Button = component(template)

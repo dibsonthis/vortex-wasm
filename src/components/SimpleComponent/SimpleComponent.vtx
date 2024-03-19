@@ -1,0 +1,70 @@
+import [component, value] : "../../lib/whirlwind"
+
+const template = `
+
+<style>
+    .btn {
+        padding: 10px;
+        margin: 5px;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+
+        transition: all 0.3s ease-in-out;
+        &:hover {
+            background-color: #3E95FF !important;
+        }
+    }
+</style>
+
+<div>
+    <h1> {{ title }} </h1>
+    <div #nameDiv>
+        <input #nameInput $height: 30px $borderRadius: 10px />
+        <button 
+            className: btn
+            $backgroundColor: green
+            @click: updateTitle
+        > 
+            Update Title 
+        </button>
+    </div>
+    <p> Hi, my name is {{ name }} and I am {{ age }} years old. </p>
+    <p> My favorite color is {{ props.color }}. </p>
+    <p> My favorite books are: </p>
+    <ul>
+        <li %for: "books, book">
+        <p> {{ book.title }} - {{ book.author }} </p>
+        </li>
+    </ul>
+</div>
+`
+
+const data = {
+    title: "Some Title",
+    age: 58,
+    name: "Jason",
+    books: [{
+        author: "James Whitman",
+        title: "The Anaconda Touch"
+    }, {
+        author: "Bradley Eric",
+        title: "Forsaken Rights"
+    }],
+}
+
+const methods = (data) => ({
+    init: () => {
+        println("Hello from Whirlwind!")
+    },
+    updateTitle: (parent) => {
+        data.title = parent.nameDiv.nameInput.value()
+        parent.nameDiv.nameInput.update({
+            value: ""
+        })
+    },
+})
+
+const SimpleComponent = component(template, data, methods)

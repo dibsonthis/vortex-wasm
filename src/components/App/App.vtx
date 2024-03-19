@@ -1,4 +1,4 @@
-import [component, value, emit_event] : "../../lib/whirlwind"
+import [component, value, emit_event, setTimeOut] : "../../lib/whirlwind"
 
 const template = f`
 
@@ -53,6 +53,9 @@ const template = f`
     </style>
     <div>
         <div #title> {{ title }} </div>
+        <div>
+            <ReactionTimer />
+        </div>
         <div $width: 800px $margin: "0 auto">
             <span $fontSize: "18px" $fontWeight: 400> 
                 This is a small demo of 
@@ -79,13 +82,20 @@ const template = f`
                 <label $color: white $paddingRight: 10px> Content: </label> 
                 <textarea #newContent defaultValue: "New Content" rows="3" cols="50" />
             </div>
+            <div #newColorDiv>
+                <label $color: white $paddingRight: 10px> Color: </label> 
+                <input #newColor _type="color" value="#ff0000" />
+            </div>
             <button className: btn @click: addSection $backgroundColor: orange> Add Section </button>
+            <button className: btn @click: timeOut $backgroundColor: red> Test </button>
         </div>
+
     </div>
 `
 
 import [Reactivity] : "../Reactivity/Reactivity"
 import [Accordion] : "../Accordion/Accordion"
+import [ReactionTimer] : "../ReactionTimer/ReactionTimer"
 
 const data = {
     title: "Welcome to Whirlwind",
@@ -110,6 +120,7 @@ const data = {
 const components = {
     Reactivity: Reactivity,
     Accordion: Accordion,
+    ReactionTimer: ReactionTimer
 }
 
 const methods = (data) => ({
@@ -120,8 +131,18 @@ const methods = (data) => ({
         data.sections.append({
             title: parent._named.newTitle.value(),
             content: parent._named.newContent.value(),
-            color: "black"
+            color: parent._named.newColor.value()
         })
+    },
+    timeOut: (parent) => {
+        const fn = () => {
+            data.sections.append({
+                title: parent._named.newTitle.value(),
+                content: parent._named.newContent.value(),
+                color: parent._named.newColor.value()
+            })
+        }
+        setTimeOut(fn, 5000)
     }
 })
 

@@ -77,7 +77,7 @@ const methods = (data) => ({
     },
 })
 
-const Accordion = component(template, data, methods)import [component, value, emit_event] : "../../lib/whirlwind"
+const Accordion = component(template, data, methods)import [component, value, emit_event, setTimeOut] : "../../lib/whirlwind"
 
 const template = f`
 
@@ -132,6 +132,9 @@ const template = f`
     </style>
     <div>
         <div #title> {{ title }} </div>
+        <div>
+            <ReactionTimer />
+        </div>
         <div $width: 800px $margin: "0 auto">
             <span $fontSize: "18px" $fontWeight: 400> 
                 This is a small demo of 
@@ -158,13 +161,20 @@ const template = f`
                 <label $color: white $paddingRight: 10px> Content: </label> 
                 <textarea #newContent defaultValue: "New Content" rows="3" cols="50" />
             </div>
+            <div #newColorDiv>
+                <label $color: white $paddingRight: 10px> Color: </label> 
+                <input #newColor _type="color" value="#ff0000" />
+            </div>
             <button className: btn @click: addSection $backgroundColor: orange> Add Section </button>
+            <button className: btn @click: timeOut $backgroundColor: red> Test </button>
         </div>
+
     </div>
 `
 
 import [Reactivity] : "../Reactivity/Reactivity"
 import [Accordion] : "../Accordion/Accordion"
+import [ReactionTimer] : "../ReactionTimer/ReactionTimer"
 
 const data = {
     title: "Welcome to Whirlwind",
@@ -189,6 +199,7 @@ const data = {
 const components = {
     Reactivity: Reactivity,
     Accordion: Accordion,
+    ReactionTimer: ReactionTimer
 }
 
 const methods = (data) => ({
@@ -199,20 +210,22 @@ const methods = (data) => ({
         data.sections.append({
             title: parent._named.newTitle.value(),
             content: parent._named.newContent.value(),
-            color: "black"
+            color: parent._named.newColor.value()
         })
+    },
+    timeOut: (parent) => {
+        const fn = () => {
+            data.sections.append({
+                title: parent._named.newTitle.value(),
+                content: parent._named.newContent.value(),
+                color: parent._named.newColor.value()
+            })
+        }
+        setTimeOut(fn, 5000)
     }
 })
 
-const App = component(template, data, methods, components)import [component] : "../../lib/whirlwind"
-
-const template = `
-<div>
-    <button> TEST </button>
-</div>
-`
-
-const Button = component(template)import [component, emit_event] : "../../lib/whirlwind"
+const App = component(template, data, methods, components)import [component, emit_event] : "../../lib/whirlwind"
 
 const template = `
 
@@ -261,7 +274,119 @@ const methods = (data) => ({
     }
 })
 
-const Modal = component(template, {}, methods)import [component, value, emit_event, event, ref, attribute] : "../../lib/whirlwind"
+const Modal = component(template, {}, methods)import [
+    component, 
+    setTimeOut, 
+    setInterval, 
+    clearInterval, 
+    hide, 
+    show, 
+    enable, 
+    disable, 
+    event, 
+    value, 
+    fetch
+] : "../../lib/whirlwind"
+
+import random
+import json
+import [map] : functional
+
+const template = `
+
+<style>
+    .block {
+        width: 400px;
+        border-radius: 20px;
+        background: #0faf87;
+        color: white;
+        text-align: center;
+        padding: 100px 0;
+        margin: 40px auto;
+    }
+</style>
+
+<div>
+    <button className: btn $color: green #start @click: start> Play </button>
+    <div @click: stop $display: none $cursor: pointer #block>
+        <div className="block">
+            Click me
+        </div>
+    </div>
+    <p #results $display: none> Your time was {{ timer }} ms, which is {{ getResult(timer) }} </p>
+    <select #catSelector @change: handleSelect multiple: true>
+        <option %for: "breeds, breed" value: {{ breed.id }}> {{ breed.name }} </option>
+    </select>
+</div>
+`
+
+const data = {
+    delay: 3443,
+    timer: 0,
+    interval: None,
+    breeds: [],
+    name: "",
+    check: {
+        isOld: false,
+        isDying: false
+    },
+    getResult: (t) => {
+        if (t <= 300) {
+            return "good"
+        } else if (t <= 500) {
+            return "average"
+        } else {
+            return "terrible"
+        }
+    }
+}
+
+const methods = (data) => ({
+    init: (parent) => {
+        const api_key = "live_zHbEWQ3nQu77w2E06tbkSKsVj49Gr5DMY6B8jobyZ5wyDnPO0vkfJ8t7A6nbPa0m"
+        fetch.get("https://api.thecatapi.com/v1/breeds", (breeds) => {
+            data.breeds = json.parse(breeds)
+        }, (data) => println("Failed"), {
+            "x-api-key": api_key
+        })  
+    },
+    start: (parent) => {
+        data.timer = 0
+        parent.start.disable()
+        parent.block.hide()
+        parent.results.hide()
+        data.delay = 2000 + random.rand_range(1000, 5000)
+        setTimeOut(() => {
+            parent.start.enable()
+            parent.block.show()
+            data.interval = setInterval(() => {
+                data.timer += 10
+            }, 10)
+        }, data.delay)
+        data.name = "starting..."
+    },
+    stop: (parent) => {
+        clearInterval(data.interval)
+        parent.block.hide()
+        parent.results.show()
+    },
+    updateName: () => {
+        data.name = event().target.value
+    },
+    updateCheck: () => {
+        data.check[event().target.name] = event().target.checked
+    },
+    handleSelect: (parent) => {
+        const indices = event().target.selectedIndices
+        var values = []
+        for (indices, i, v) {
+            values.append(data.breeds[i].name)
+        }
+        println(values)
+    }
+})
+
+const ReactionTimer = component(template, data, methods)import [component, value, emit_event, event, ref, attribute] : "../../lib/whirlwind"
 
 const template = f`
     <style>
@@ -434,34 +559,180 @@ const components = {
     Modal: Modal
 }
 
-const Reactivity = component(template, data, methods, components)import wasm
+const Reactivity = component(template, data, methods, components)import [component, value] : "../../lib/whirlwind"
+
+const template = `
+
+<style>
+    .btn {
+        padding: 10px;
+        margin: 5px;
+        color: white;
+        border-radius: 10px;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+
+        transition: all 0.3s ease-in-out;
+        &:hover {
+            background-color: #3E95FF !important;
+        }
+    }
+</style>
+
+<div>
+    <h1> {{ title }} </h1>
+    <div #nameDiv>
+        <input #nameInput $height: 30px $borderRadius: 10px />
+        <button 
+            className: btn
+            $backgroundColor: green
+            @click: updateTitle
+        > 
+            Update Title 
+        </button>
+    </div>
+    <p> Hi, my name is {{ name }} and I am {{ age }} years old. </p>
+    <p> My favorite color is {{ props.color }}. </p>
+    <p> My favorite books are: </p>
+    <ul>
+        <li %for: "books, book">
+        <p> {{ book.title }} - {{ book.author }} </p>
+        </li>
+    </ul>
+</div>
+`
+
+const data = {
+    title: "Some Title",
+    age: 58,
+    name: "Jason",
+    books: [{
+        author: "James Whitman",
+        title: "The Anaconda Touch"
+    }, {
+        author: "Bradley Eric",
+        title: "Forsaken Rights"
+    }],
+}
+
+const methods = (data) => ({
+    init: () => {
+        println("Hello from Whirlwind!")
+    },
+    updateTitle: (parent) => {
+        data.title = parent.nameDiv.nameInput.value()
+        parent.nameDiv.nameInput.update({
+            value: ""
+        })
+    },
+})
+
+const SimpleComponent = component(template, data, methods)import wasm
+
+const __script_event_stringify = "globalThis._event = JSON.stringify({
+    type: e?.type,
+    clientX: e?.clientX,
+    clientY: e?.clientY,
+    ctrlKey: e?.ctrlKey,
+    altKey: e?.altKey,
+    shiftKey: e?.shiftKey,
+    x: e?.x,
+    y: e?.y,
+    fromElement: {
+        id: e?.fromElement?.id
+    },
+    target: {
+        value: e?.target?.value,
+        checked: e?.target?.checked,
+        name: e?.target?.name,
+        selectedIndex: e?.target?.selectedIndex,
+        selectedIndices: Object.keys(e?.target?.selectedOptions)?.map((k) => parseInt(k))
+    },
+    data: e?.detail?.data
+});"
+
+const setTimeOut = (func, ms = 1000) => {
+    const fn = wasm.make_closure(func)
+    wasm.run_script(f`
+        var func = (e) => {
+            ${__script_event_stringify}
+            Module.ccall('vortex_eval','void',['number'],[${fn}]);
+        };
+
+        setTimeout(() => {
+            func();
+          }, ${ms});
+    `)
+}
+
+const setInterval = (func, ms = 1000) => {
+    const fn = wasm.make_closure(func)
+    const interval = wasm.run_script_string(f`
+        var func = (e) => {
+            ${__script_event_stringify}
+            Module.ccall('vortex_eval','void',['number'],[${fn}]);
+        };
+
+        setInterval(() => {
+            func();
+          }, ${ms});
+    `)
+    return interval
+}
+
+const clearInterval = (interval_id) => {
+    wasm.run_script(f`
+        clearInterval(${interval_id});
+    `)
+}
+
+const hide = (elem) => {
+    elem.update({
+        style: {
+            display: "none"
+        }
+    })
+}
+
+const show = (elem) => {
+    elem.update({
+        style: {
+            display: "block"
+        }
+    })
+}
+
+const disable = (elem) => {
+    elem.update({
+        disabled: true
+    })
+}
+
+const enable = (elem) => {
+    elem.update({
+        disabled: false
+    })
+}import wasm
 import math
 import json
 import random
 import [forEach, map] : functional
 import [substring, trim, split, replaceAll, contains, startsWith] : string
+import [
+    setTimeOut,
+    setInterval,
+    clearInterval,
+    __script_event_stringify,
+    show,
+    hide,
+    enable,
+    disable
+] : "whirlwind-helpers"
 
 const uuid = () => {
     return string(math.abs(random.rand()))
 }
-
-const __script_event_stringify = "globalThis._event = JSON.stringify({
-    type: e.type,
-    clientX: e.clientX,
-    clientY: e.clientY,
-    ctrlKey: e.ctrlKey,
-    altKey: e.altKey,
-    shiftKey: e.shiftKey,
-    x: e.x,
-    y: e.y,
-    fromElement: {
-        id: e?.fromElement?.id
-    },
-    target: {
-        value: e.target?.value
-    },
-    data: e.detail?.data
-});"
 
 const get_property = (obj, prop) => {
     var _prop = prop.split(".")
@@ -588,6 +859,7 @@ type element = (config = {}, parent = None) => {
         if (key == "onChange") {
             elem.onChange = wasm.make_closure(config[key])
             script += f"_elem.onchange = function(e) {
+                console.log(e);
                 ${__script_event_stringify}
                 Module.ccall('vortex_eval','void',['number'],[${elem.onChange}]);
             };"
@@ -753,6 +1025,7 @@ type element = (config = {}, parent = None) => {
                     }
                     this.onChange = wasm.make_closure(data[key])
                     script += f"_elem.onchange = function(e) {
+                        console.log(e);
                         ${__script_event_stringify}
                         Module.ccall('vortex_eval','void',['number'],[${this.onChange}]);
                     };"
@@ -841,7 +1114,11 @@ type element = (config = {}, parent = None) => {
                     // We need to deal with children AFTER this element has been created
                     continue;
                 }
-                script += f"_elem.${key} = `${data[key]}`;"
+                if (data[key].type() == "Boolean" or data[key].type() == "Number") {
+                    script += f"_elem.${key} = ${data[key]};"
+                } else {
+                    script += f"_elem.${key} = `${data[key]}`;"
+                }
             }
 
             wasm.run_script(script);
@@ -1595,7 +1872,6 @@ const parseContent = (content, data = {}) => {
     }
 
     variables.forEach((var, i) => {
-        // new_content = new_content.replaceAll(substrings[i], string(data[var]))
         new_content = new_content.replaceAll(substrings[i], string(eval(var, data)))
     })
 
@@ -1620,7 +1896,7 @@ const new_element = (tag, data, dep, config, is_custom, components, props, colle
             }
         })
 
-        if (!collecting_for_children) {
+        if (!collecting_for_children and !props.inner["for"]) {
             const parsed_content = tag.content.parseContent(data)
             config.innerHTML = parsed_content.content
             dependencies = dep and dep or []
@@ -1649,10 +1925,6 @@ const new_element = (tag, data, dep, config, is_custom, components, props, colle
 }
 
 const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, components = {}) => {
-
-    // if (!data.__id) {
-    //     data.__id = uuid()
-    // }
 
     var looped_elements = []
 
@@ -1689,15 +1961,18 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 return
             }
             data.props._dynamic_raw[val] = data.props[val]
-            // println(val)
-            // println(__data_parent_merged)
             data.props[val] = eval(data.props[val], __data_parent_merged)
             if (data.__parent[val]) {
                 data.__parent[val]::onChange((e) => {
                     if (data[val]) {
                         data[val] = e.current
                         if (methods.init) {
-                            methods.init()
+                            const arity = methods.init.info().arity
+                            if (arity == 0) {
+                                methods.init()
+                            } else if (arity == 1) {
+                                methods.init(parent)
+                            }
                         }
                     }
                 })
@@ -1949,12 +2224,14 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     deps.append(name)
                 })
 
-                for (props.props._dynamic, index, val) {
-                    if (props.props[val].type() != "String") {
-                        continue
+                if (!props.inner["for"]) {
+                    for (props.props._dynamic, index, val) {
+                        if (props.props[val].type() != "String") {
+                            continue
+                        }
+                        props.props._dynamic_raw[val] = props.props[val]
+                        props.props[val] = eval(props.props[val], prop_data)
                     }
-                    props.props._dynamic_raw[val] = props.props[val]
-                    props.props[val] = eval(props.props[val], prop_data)
                 }
 
                 if (props.props) {
@@ -2138,14 +2415,12 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
         const list = elem.values[0]
         dependencies.append(list)
 
+        println(container.id)
+
         const methods_copy = copy(methods)
         methods_copy.remove_prop("setup")
         methods_copy.remove_prop("before")
         methods_copy.remove_prop("init")
-
-        const ls = eval(list, data)
-
-        println(ls)
 
         if (elem.values.length() == 1) {
             wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
@@ -2212,6 +2487,8 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                 current_onchange(e)
             }
 
+            println(container.id)
+
             if (elem.values.length() == 1) {
                 wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
     
@@ -2268,26 +2545,6 @@ const createElement = (html, data = {}, methods = (data) => ({}), custom = {}, c
                     }
                 })
             }
-
-            // var iterator = elem.values[1].trim()
-
-            // const current_iterator_variable = data[iterator]
-
-            // wasm.run_script(f"document.getElementById('${container.id}').innerHTML = ''")
-
-            // data[list].forEach((v) => {
-            //     data[iterator] = v
-            //     var tags = elem.children
-            //     var e = createElement(tags, data, (data) => methods_copy, custom, components)
-            //     wasm.run_script(f"document.getElementById('${container.id}').appendChild(document.getElementById('${e.id}'))")
-
-
-            //     if (current_iterator_variable) {
-            //         data[iterator] = current_iterator_variable
-            //     } else {
-            //         data.remove_prop(iterator)
-            //     }
-            // })
         })
     })
 
